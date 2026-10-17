@@ -107,7 +107,7 @@ class LiveCompanionGateway {
   }) async {
     throw const CompanionException(
       'approval_not_wired',
-      '审批应答还在接入中：DSH 通过 $events 瀑布下发审批，需要先建立事件订阅。',
+      '审批应答还在接入中：DSH 通过 \$events 瀑布下发审批，需要先建立事件订阅。',
     );
   }
 
