@@ -29,7 +29,7 @@ gh release download --repo youzhaiZhi/dsh-companion --pattern '*.apk'
 ## 当前限制（v0.2.0）
 
 - **通知只在 App 进程存活时触发**：依赖 `session/follow` 事件流，没有后台常驻服务，也没有 FCM 推送。切到后台后系统可能回收进程，此时收不到提醒。
-- 审批/提问应答的端点尚未在真机上核实（`approval/decide` 为源码推导），点了可能报错；见 `docs/protocol.md` 第 5、6 节。
+- **审批/提问应答尚未接通**：DSH 的审批走 `$events` 瀑布事件（不是普通 RPC），正确链路已在 `docs/protocol.md` 第 6 节写清，App 侧的事件订阅重构还没做；当前点击会明确提示「接入中」。
 - 二维码扫码：暂用「粘贴链接」，相机扫码后续加。
 - `session/list` / `session/follow` 的字段名做了宽松解析，个别字段（模型、预览）可能为空，等真机联调回填。
 
