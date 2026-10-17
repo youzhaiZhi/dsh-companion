@@ -1,5 +1,4 @@
 import 'package:dsh_companion/core/contracts.dart';
-import 'package:dsh_companion/core/state/companion_controller.dart';
 
 /// 一条待发的任务通知。
 class TaskNotification {
