@@ -105,10 +105,59 @@ host → client:
 | 会话列表 | `session/list` | `{}` | `{rows:[{sessionId,title,cwd,updatedAt,formatStatus,agentAvailable,...}]}` | 🟡 行结构按源码推断，字段名可能不同 |
 | 会话事件流 | `session/follow`（stream） | `{sessionId}` | opening 快照 + `{type:'event', event:{type,data,seq}}` | 🟡 args 名待确认 |
 | 发消息 | `session/prompt` | `{sessionId, requestId, content:[{type:'text',text}]}` | 接受结果 | 🟡 结构按 `session/prompt` 源码 |
-| 审批应答 | `approval/decide` | `{sessionId, approvalId, outcome:'approved'\|'denied'\|'cancelled'}` | — | 🔴 端点名/裁决字段未确认 |
+| 审批应答 | `$events/result`（一元 RPC） | `{clientId, eventId, outcome:{kind:'result', value:'allowed-once'\|'rejected'}}` | — | ✅ 源码确认（见下方专节） |
 | 事件名 | — | — | `turn/start`,`turn/end`,`user/message`,`assistant/message`,`tool/call`,`tool/result`,`approval/asked`,`approval/decided`,`job/registered`,`job/settled`,`session/title` | ✅ `SessionEventMap` |
 
-## 6. 通知与状态折叠（App 侧逻辑）
+## 6. 审批 / 提问：走 `$events` 瀑布，不是普通 RPC ✅
+
+⚠️ **重要纠正**：早期以为审批是 `approval/decide` 这类普通 RPC，**这是错的**。
+`approval/asked` 与 `approval/decided` 只是写入会话日志的审计事件（`dsh-user-approval` 源码：*Both are log-only*）。
+真正「人怎么作答」走的是 **Client 事件瀑布（waterfall）**：
+
+### 6.1 订阅
+
+```
+WS /api/remote.mux
+client → host: {"type":"open","streamId":"...","endpoint":"$events","payload":{"args":{}}}
+host → client: {"type":"item","streamId":"...","value":{"type":"ready","clientId":"<id>","host":{"home":"..."}}}
+```
+
+`clientId` 之后每次应答都要带上。
+
+### 6.2 审批帧
+
+```
+host → client: {"type":"item","streamId":"...","value":{
+  "type":"event",
+  "event":"approval/request",      // 提问卡片对应 dsh-user-questions 的事件名
+  "eventId":"<id>",
+  "agentId":"<id>",
+  "request":{ ...具体请求，按事件类型... }   // 不含 agent / signal
+}}
+```
+
+客户端 UI 的等价实现（`dsh-client-ui-approval`）：
+`ctx.remote.$on("approval/request", (request, next) => answerApproval(...))`，
+用户点按钮后 `pending.answer("allowed-once" | "rejected")`。
+
+### 6.3 应答
+
+```
+POST /api
+{"type":"client-request","rpcId":"...","method":"$events/result","payload":{"args":{
+  "clientId":"<ready 帧里的 clientId>",
+  "eventId":"<事件帧里的 eventId>",
+  "outcome":{"kind":"result","value":"allowed-once"}     // 或 "rejected"
+}}}
+```
+
+- `outcome.kind` 只能是 `next`（交给下个监听者）/ `result` / `rejected`（带 error）。
+- 只有持有 `$events` 流、且 `interactions === 'answer'` 的 Peer 才能应答。
+- Host 可能发送 `{"type":"cancel","eventId":"..."}` 撤回请求，此时不应再应答。
+
+> 结论：**审批必须挂在同一条 `$events` 长连上**，因此 App 的事件模型要从「每会话开一条 `session/follow`」调整为「一条 `$events` + 按 agentId/sessionId 分发」。这是下一轮重构的重点。
+
+## 7. 通知与状态折叠（App 侧逻辑）
 
 App 不做协议层的额外订阅，只把 `session/follow` 的事件折叠成列表状态，再据此发系统通知：
 
@@ -123,7 +172,7 @@ App 不做协议层的额外订阅，只把 `session/follow` 的事件折叠成�
 - 通知总开关与分类开关都在设置页，存 `SharedPreferences`。
 - 通知依赖 App 进程存活（没有后台常驻/FCM），进程被回收后收不到。
 
-## 7. 已知不确定项（下一步真机验证）
+## 8. 已知不确定项（下一步真机验证）
 
 1. `session/list` 的实际行字段（标题取 `title` 还是 `displayTitle`；运行状态字段名）。
 2. `session/follow` 的 args 形态（`sessionId` / `address.sessionId` / `address:{kind,sessionId}`）与 opening 快照结构。
@@ -132,7 +181,7 @@ App 不做协议层的额外订阅，只把 `session/follow` 的事件折叠成�
 
 验证方法：本地 `tools/mock-gateway`（进行中）+ 真机配对后用 `scripts/probe` 发只读请求，把实际 JSON 回填到本文档。
 
-## 8. 参考源码位置
+## 9. 参考源码位置
 
 - dsh-mobile 网关：`~/.dsh/profiles/desktop/node_modules/dsh-mobile/lib/index.mjs`（TS 源码在 sourcemap 中）
 - DSH 客户端包（`@deepseek-ai/dsh-api-gateway`、`dsh-client-connection`、`dsh-api-session-controller`、`dsh-client-ui-*`）：`tools/mock-gateway/.scratch/dsh-pkgs/`（本地研究用，不入库）

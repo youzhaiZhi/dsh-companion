@@ -93,22 +93,22 @@ class LiveCompanionGateway {
   }
 
   /// 审批/提问应答。方法名按 DSH approval 端点约定，未确认时由 UI 显示错误。
+  /// 审批应答。
+  ///
+  /// ⚠️ 尚未接通：DSH 的审批不是普通 RPC，而是 `$events` 瀑布事件：
+  /// Host 经 `$events` 下发 `{type:'event', event:'approval/request', eventId, ...}`，
+  /// 客户端必须用同一条流的 `clientId` + `eventId` 调 `$events/result`
+  /// （`{clientId, eventId, outcome:{kind:'result', value:'allowed-once'|'rejected'}}`）。
+  /// 详见 docs/protocol.md 第 6 节。这里先明确失败，避免发出不存在的 RPC。
   Future<void> decideApproval(
     ApprovalRequest request,
     ApprovalDecision decision, {
     List<String> selectedOptions = const <String>[],
   }) async {
-    final outcome = switch (decision) {
-      ApprovalDecision.allow => 'approved',
-      ApprovalDecision.deny => 'denied',
-      ApprovalDecision.cancel => 'cancelled',
-    };
-    await _requireRpc().call('approval/decide', <String, Object?>{
-      'sessionId': request.sessionId,
-      'approvalId': request.id,
-      'outcome': outcome,
-      if (selectedOptions.isNotEmpty) 'answers': selectedOptions,
-    });
+    throw const CompanionException(
+      'approval_not_wired',
+      '审批应答还在接入中：DSH 通过 $events 瀑布下发审批，需要先建立事件订阅。',
+    );
   }
 
   Future<void> close() async {
