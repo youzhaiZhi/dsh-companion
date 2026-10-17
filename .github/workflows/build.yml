@@ -78,15 +78,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build APK (arm64-v8a only)
-        run: flutter build apk --release --target-platform android-arm64
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi
 
       - name: Verify ABI (arm64-v8a only) and stage artifact
         shell: bash
         run: |
           set -euo pipefail
-          APK=$(find build/app/outputs/flutter-apk -maxdepth 1 -name '*-release.apk' | head -n1)
-          if [ -z "$APK" ]; then
-            echo "::error::release APK not found under build/app/outputs/flutter-apk"
+          APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::arm64-v8a release APK not found at $APK"
             ls -la build/app/outputs/flutter-apk 2>/dev/null || true
             exit 1
           fi

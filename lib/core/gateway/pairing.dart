@@ -7,7 +7,7 @@ import 'package:crypto/crypto.dart';
 import '../contracts.dart';
 
 /// dsh-mobile 配对链接：
-///   https://192.168.1.5:3443/mobile-access/pair#instance=<hex>&token=<one-time>
+/// `https://192.168.1.5:3443/mobile-access/pair#instance=<hex>&token=<one-time>`
 ///
 /// `instance` 同时是网关私有 CA 的 SHA-256 指纹（小写十六进制），
 /// 因此拿到 CA 证书后必须核对指纹，防止中间人。
@@ -31,9 +31,16 @@ class PairingLink {
         '配对链接格式不对，请复制完整的 https://.../mobile-access/pair#... 链接',
       );
     }
-    final fragment = uri.fragmentParams;
-    final instanceId = fragment['instance'];
-    final token = fragment['token'];
+    final fragment = uri.fragment;
+    final params = <String, String>{};
+    for (final pair in fragment.split('&')) {
+      final index = pair.indexOf('=');
+      if (index > 0) {
+        params[pair.substring(0, index)] = Uri.decodeComponent(pair.substring(index + 1));
+      }
+    }
+    final instanceId = params['instance'];
+    final token = params['token'];
     if (instanceId == null || instanceId.isEmpty || token == null || token.isEmpty) {
       throw const CompanionException('pairing_link_invalid', '配对链接缺少 instance 或 token，请重新复制');
     }
@@ -58,7 +65,7 @@ Future<Uint8List> fetchGatewayCa(Uri origin) async {
     if (response.statusCode != 200) {
       throw CompanionException('ca_fetch_failed', '网关未返回 CA 证书（HTTP ${response.statusCode}）');
     }
-    final bytes = await consolidate(response);
+    final bytes = await response.expand((chunk) => chunk).toList();
     if (bytes.isEmpty) {
       throw const CompanionException('ca_fetch_failed', '网关 CA 证书为空');
     }

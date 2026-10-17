@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import '../contracts.dart';
 import 'pairing.dart';
@@ -14,7 +13,6 @@ class LiveCompanionGateway {
   LiveCompanionGateway();
 
   final PairingClient _pairing = const PairingClient();
-  HttpClient? _http;
   RpcClient? _rpc;
   MuxClient? _mux;
   DeviceRecord? _device;
@@ -47,7 +45,6 @@ class LiveCompanionGateway {
       expiresAt: renewed.sessionExpiresAt,
     );
     final http = pinnedHttpClient(device.caPem!);
-    _http = http;
     _rpc = RpcClient(client: http, origin: device.origin, credentials: credentials);
     _mux = MuxClient(client: http, origin: device.origin, credentials: credentials);
   }
@@ -114,7 +111,6 @@ class LiveCompanionGateway {
     _mux = null;
     _rpc?.close();
     _rpc = null;
-    _http = null;
   }
 
   // ---- helpers ----
@@ -233,14 +229,14 @@ class LiveCompanionGateway {
     if (value is String) {
       return value;
     }
-    if (value is Map) {
+    if (value is Map<Object?, Object?>) {
       final content = value['content'];
       if (content is String) {
         return content;
       }
       if (content is List) {
         final joined = content
-            .whereType<Map>()
+            .whereType<Map<Object?, Object?>>()
             .map((part) => part['text'] ?? part['content'])
             .whereType<String>()
             .join();

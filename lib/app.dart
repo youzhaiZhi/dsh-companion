@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/contracts.dart';
-import 'core/state/companion_controller.dart';
 import 'ui/screens/devices_screen.dart';
 import 'ui/theme.dart';
 

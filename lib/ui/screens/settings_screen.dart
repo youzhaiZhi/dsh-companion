@@ -86,10 +86,10 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('版本'),
-            subtitle: const Text('DSH 伴侣 0.1.0'),
+          const ListTile(
+            leading: Icon(Icons.info_outline),
+            title: Text('版本'),
+            subtitle: Text('DSH 伴侣 0.1.0'),
           ),
         ],
       ),

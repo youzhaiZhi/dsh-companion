@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../app.dart';
-import '../../core/contracts.dart';
 import '../strings.dart';
 import 'session_detail_screen.dart';
 import 'settings_screen.dart';
