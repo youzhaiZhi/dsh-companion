@@ -45,8 +45,10 @@ class LiveCompanionGateway {
       expiresAt: renewed.sessionExpiresAt,
     );
     final http = pinnedHttpClient(device.caPem!);
-    _rpc = RpcClient(client: http, origin: device.origin, credentials: credentials);
-    _mux = MuxClient(client: http, origin: device.origin, credentials: credentials);
+    _rpc = RpcClient(
+        client: http, origin: device.origin, credentials: credentials);
+    _mux = MuxClient(
+        client: http, origin: device.origin, credentials: credentials);
   }
 
   Future<List<SessionSummary>> listSessions() async {
@@ -59,12 +61,14 @@ class LiveCompanionGateway {
       }
       sessions.add(SessionSummary(
         id: id,
-        title: (row['title'] ?? row['displayTitle'] ?? row['cwd'] ?? id).toString(),
+        title: (row['title'] ?? row['displayTitle'] ?? row['cwd'] ?? id)
+            .toString(),
         workspace: row['cwd']?.toString(),
         model: row['model']?.toString(),
         preview: row['preview']?.toString(),
         status: _statusOf(row),
-        updatedAt: _time(row['updatedAt'] ?? row['lastPromptAt']) ?? DateTime.now(),
+        updatedAt:
+            _time(row['updatedAt'] ?? row['lastPromptAt']) ?? DateTime.now(),
       ));
     }
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -73,7 +77,8 @@ class LiveCompanionGateway {
 
   /// 会话事件流（`session/follow`）。opening 与增量都按事件映射。
   Stream<SessionEvent> watchSession(String sessionId) {
-    final stream = _requireMux().open('session/follow', <String, Object?>{'sessionId': sessionId});
+    final stream = _requireMux()
+        .open('session/follow', <String, Object?>{'sessionId': sessionId});
     return stream.expand<Object?>(_flattenFollowers).map(_toEvent);
   }
 
@@ -169,18 +174,32 @@ class LiveCompanionGateway {
   SessionEvent _toEvent(Object? raw) {
     final now = DateTime.now();
     if (raw is! Map<String, dynamic>) {
-      return SessionEvent(id: newRpcId(), kind: SessionEventKind.unknown, at: now, text: raw?.toString());
+      return SessionEvent(
+          id: newRpcId(),
+          kind: SessionEventKind.unknown,
+          at: now,
+          text: raw?.toString());
     }
     final type = (raw['type'] ?? 'unknown').toString();
-    final data = raw['data'] is Map<String, dynamic> ? raw['data']! as Map<String, dynamic> : const <String, dynamic>{};
+    final data = raw['data'] is Map<String, dynamic>
+        ? raw['data']! as Map<String, dynamic>
+        : const <String, dynamic>{};
     final seq = raw['seq'];
     final id = seq != null ? '$type-$seq' : newRpcId();
 
     switch (type) {
       case 'user/message':
-        return SessionEvent(id: id, kind: SessionEventKind.userMessage, at: now, text: _textOf(data['message'] ?? data));
+        return SessionEvent(
+            id: id,
+            kind: SessionEventKind.userMessage,
+            at: now,
+            text: _textOf(data['message'] ?? data));
       case 'assistant/message':
-        return SessionEvent(id: id, kind: SessionEventKind.assistantMessage, at: now, text: _textOf(data['message'] ?? data));
+        return SessionEvent(
+            id: id,
+            kind: SessionEventKind.assistantMessage,
+            at: now,
+            text: _textOf(data['message'] ?? data));
       case 'tool/call':
         return SessionEvent(
           id: id,
@@ -209,7 +228,11 @@ class LiveCompanionGateway {
           text: data['reason']?.toString(),
         );
       case 'turn/start':
-        return SessionEvent(id: id, kind: SessionEventKind.statusChange, at: now, toolStatus: 'running');
+        return SessionEvent(
+            id: id,
+            kind: SessionEventKind.statusChange,
+            at: now,
+            toolStatus: 'running');
       case 'turn/end':
         return SessionEvent(
           id: id,
@@ -219,9 +242,18 @@ class LiveCompanionGateway {
           text: data['reason']?.toString(),
         );
       case 'error':
-        return SessionEvent(id: id, kind: SessionEventKind.error, at: now, text: data['message']?.toString() ?? type);
+        return SessionEvent(
+            id: id,
+            kind: SessionEventKind.error,
+            at: now,
+            text: data['message']?.toString() ?? type);
       default:
-        return SessionEvent(id: id, kind: SessionEventKind.unknown, at: now, text: type, meta: data);
+        return SessionEvent(
+            id: id,
+            kind: SessionEventKind.unknown,
+            at: now,
+            text: type,
+            meta: data);
     }
   }
 
@@ -258,7 +290,9 @@ class LiveCompanionGateway {
     }
     if (value is String) {
       final ms = int.tryParse(value);
-      return ms != null ? DateTime.fromMillisecondsSinceEpoch(ms) : DateTime.tryParse(value);
+      return ms != null
+          ? DateTime.fromMillisecondsSinceEpoch(ms)
+          : DateTime.tryParse(value);
     }
     return null;
   }
@@ -268,7 +302,9 @@ class LiveCompanionGateway {
     if (state == true || state == 'running') {
       return SessionStatus.running;
     }
-    if (state == 'waiting' || state == 'waiting-input' || row['waitingForInput'] == true) {
+    if (state == 'waiting' ||
+        state == 'waiting-input' ||
+        row['waitingForInput'] == true) {
       return SessionStatus.waitingInput;
     }
     if (row['agentAvailable'] == false) {

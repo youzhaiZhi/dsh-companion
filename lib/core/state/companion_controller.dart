@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import '../contracts.dart';
 import '../gateway/companion_gateway_impl.dart';
 import '../gateway/pairing.dart';
+import '../notifications/task_notifier.dart';
 import '../storage/stores.dart';
+import 'session_logic.dart';
 
 /// 诊断日志（环形缓冲，脱敏后供设置页查看）。
 class Diagnostics {
@@ -65,7 +67,8 @@ class SessionFeedImpl extends ChangeNotifier implements SessionFeed {
   Object? get error => _error;
 
   @override
-  List<ApprovalRequest> get pendingApprovals => List<ApprovalRequest>.unmodifiable(_approvals.values);
+  List<ApprovalRequest> get pendingApprovals =>
+      List<ApprovalRequest>.unmodifiable(_approvals.values);
 
   void updateSummary(SessionSummary summary) {
     _summary = summary;
@@ -114,7 +117,8 @@ class SessionFeedImpl extends ChangeNotifier implements SessionFeed {
     } else {
       _events.add(event);
     }
-    if (event.kind == SessionEventKind.approvalRequest && event.approvalId != null) {
+    if (event.kind == SessionEventKind.approvalRequest &&
+        event.approvalId != null) {
       _approvals[event.approvalId!] = ApprovalRequest(
         id: event.approvalId!,
         sessionId: sessionId,
@@ -148,13 +152,16 @@ class CompanionControllerImpl extends CompanionController {
     DeviceStore? deviceStore,
     SettingsStore? settingsStore,
     LiveCompanionGateway? gateway,
+    TaskNotifierApi? notifier,
   })  : _deviceStore = deviceStore ?? DeviceStore(),
         _settingsStore = settingsStore ?? SettingsStore(),
-        _gateway = gateway ?? LiveCompanionGateway();
+        _gateway = gateway ?? LiveCompanionGateway(),
+        _notifier = notifier ?? TaskNotifier();
 
   final DeviceStore _deviceStore;
   final SettingsStore _settingsStore;
   final LiveCompanionGateway _gateway;
+  final TaskNotifierApi _notifier;
   final Diagnostics _diagnostics = Diagnostics();
 
   bool _initializing = true;
@@ -183,7 +190,8 @@ class CompanionControllerImpl extends CompanionController {
   String? get connectionError => _connectionError;
 
   @override
-  List<SessionSummary> get sessions => List<SessionSummary>.unmodifiable(_sessions);
+  List<SessionSummary> get sessions =>
+      List<SessionSummary>.unmodifiable(_sessions);
 
   @override
   DateTime? get sessionsUpdatedAt => _sessionsUpdatedAt;
@@ -192,7 +200,8 @@ class CompanionControllerImpl extends CompanionController {
   SessionFeed? get activeFeed => _activeFeed;
 
   @override
-  List<ApprovalRequest> get pendingApprovals => _activeFeed?.pendingApprovals ?? const <ApprovalRequest>[];
+  List<ApprovalRequest> get pendingApprovals =>
+      _activeFeed?.pendingApprovals ?? const <ApprovalRequest>[];
 
   @override
   AppSettings get settings => _settings;
@@ -227,7 +236,8 @@ class CompanionControllerImpl extends CompanionController {
   }) async {
     final caDer = await fetchGatewayCa(origin);
     final fingerprint = sha256Hex(caDer);
-    final parsed = PairingLink(origin: origin, instanceId: fingerprint, token: code.trim());
+    final parsed = PairingLink(
+        origin: origin, instanceId: fingerprint, token: code.trim());
     return _pair(parsed, label: label);
   }
 
@@ -246,7 +256,9 @@ class CompanionControllerImpl extends CompanionController {
     );
     _diagnostics.log('paired ${device.origin}');
     final updated = <DeviceRecord>[
-      ..._devices.where((existing) => existing.instanceId != device.instanceId || existing.origin != device.origin),
+      ..._devices.where((existing) =>
+          existing.instanceId != device.instanceId ||
+          existing.origin != device.origin),
       device,
     ];
     _devices = updated;
@@ -273,7 +285,9 @@ class CompanionControllerImpl extends CompanionController {
       await _gateway.connect(device);
       _phase = ConnectionPhase.connected;
       _diagnostics.log('connected ${device.origin}');
-      final index = _devices.indexWhere((existing) => existing.instanceId == device.instanceId && existing.origin == device.origin);
+      final index = _devices.indexWhere((existing) =>
+          existing.instanceId == device.instanceId &&
+          existing.origin == device.origin);
       if (index >= 0) {
         final touched = device.copyWith(lastConnectedAt: DateTime.now());
         _devices[index] = touched;
@@ -338,7 +352,11 @@ class CompanionControllerImpl extends CompanionController {
   Future<void> openSession(String sessionId) async {
     final summary = _sessions.firstWhere(
       (session) => session.id == sessionId,
-      orElse: () => SessionSummary(id: sessionId, title: sessionId, status: SessionStatus.unknown, updatedAt: DateTime.now()),
+      orElse: () => SessionSummary(
+          id: sessionId,
+          title: sessionId,
+          status: SessionStatus.unknown,
+          updatedAt: DateTime.now()),
     );
     await _activeFeed?.disposeFeed();
     final feed = SessionFeedImpl(
@@ -354,22 +372,39 @@ class CompanionControllerImpl extends CompanionController {
     notifyListeners();
   }
 
-  void _onFeedEvent(String sessionId, SessionEvent event) {
+  void _onFeedEvent(String sessionId, SessionEvent event) =>
+      applySessionEvent(sessionId, event);
+
+  /// 把一个会话事件并进列表状态（状态徽章 + 通知）。
+  ///
+  /// 供 SessionFeed 回调与测试驱动使用：只做状态折叠与通知，不发网络请求。
+  void applySessionEvent(String sessionId, SessionEvent event) {
     final index = _sessions.indexWhere((session) => session.id == sessionId);
     if (index < 0) {
       return;
     }
     final current = _sessions[index];
-    final nextStatus = switch (event.kind) {
-      SessionEventKind.statusChange when event.toolStatus == 'running' => SessionStatus.running,
-      SessionEventKind.statusChange => SessionStatus.idle,
-      SessionEventKind.approvalRequest => SessionStatus.waitingInput,
-      _ => current.status,
-    };
+    final nextStatus = sessionStatusAfterEvent(current.status, event);
     if (nextStatus != current.status) {
-      _sessions[index] = current.copyWith(status: nextStatus, updatedAt: DateTime.now());
+      _sessions[index] =
+          current.copyWith(status: nextStatus, updatedAt: DateTime.now());
       notifyListeners();
+      _maybeNotify(current, nextStatus);
     }
+  }
+
+  /// 任务完成 / 等待输入时提醒；只在状态真的变化时触发一次。
+  void _maybeNotify(SessionSummary session, SessionStatus nextStatus) {
+    final notification = taskNotificationFor(
+      session: session,
+      nextStatus: nextStatus,
+      settings: _settings,
+    );
+    if (notification == null) {
+      return;
+    }
+    unawaited(_notifier.notifyTask(
+        title: notification.title, body: notification.body));
   }
 
   @override
@@ -394,7 +429,8 @@ class CompanionControllerImpl extends CompanionController {
     ApprovalDecision decision, {
     List<String> selectedOptions = const <String>[],
   }) async {
-    await _gateway.decideApproval(request, decision, selectedOptions: selectedOptions);
+    await _gateway.decideApproval(request, decision,
+        selectedOptions: selectedOptions);
     _activeFeed?.removeApproval(request.id);
     notifyListeners();
   }
@@ -404,7 +440,9 @@ class CompanionControllerImpl extends CompanionController {
 
   @override
   Future<void> removeDevice(String instanceId) async {
-    _devices = _devices.where((device) => device.instanceId != instanceId).toList(growable: false);
+    _devices = _devices
+        .where((device) => device.instanceId != instanceId)
+        .toList(growable: false);
     await _deviceStore.save(_devices);
     if (_activeDevice?.instanceId == instanceId) {
       await disconnect();
@@ -415,7 +453,9 @@ class CompanionControllerImpl extends CompanionController {
   @override
   Future<void> renameDevice(String instanceId, String label) async {
     _devices = _devices
-        .map((device) => device.instanceId == instanceId ? device.copyWith(label: label) : device)
+        .map((device) => device.instanceId == instanceId
+            ? device.copyWith(label: label)
+            : device)
         .toList(growable: false);
     await _deviceStore.save(_devices);
     notifyListeners();

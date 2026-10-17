@@ -14,7 +14,8 @@ class PairScreen extends StatefulWidget {
 
 class _PairScreenState extends State<PairScreen> {
   final TextEditingController _linkController = TextEditingController();
-  final TextEditingController _originController = TextEditingController(text: 'https://192.168.1.2:3443');
+  final TextEditingController _originController =
+      TextEditingController(text: 'https://192.168.1.2:3443');
   final TextEditingController _codeController = TextEditingController();
   bool _manual = false;
   bool _busy = false;
@@ -40,12 +41,14 @@ class _PairScreenState extends State<PairScreen> {
         if (origin == null || !origin.hasScheme || origin.host.isEmpty) {
           throw Exception('请输入形如 https://192.168.1.2:3443 的地址');
         }
-        await controller.pairWithCode(origin: origin, code: _codeController.text.trim());
+        await controller.pairWithCode(
+            origin: origin, code: _codeController.text.trim());
       } else {
         await controller.pairWithLink(_linkController.text.trim());
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(AppStrings.pairSuccess)));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text(AppStrings.pairSuccess)));
         Navigator.of(context).pop();
       }
     } catch (error) {
@@ -95,12 +98,14 @@ class _PairScreenState extends State<PairScreen> {
           ] else ...<Widget>[
             TextField(
               controller: _originController,
-              decoration: const InputDecoration(labelText: AppStrings.pairOriginLabel),
+              decoration:
+                  const InputDecoration(labelText: AppStrings.pairOriginLabel),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _codeController,
-              decoration: const InputDecoration(labelText: AppStrings.pairCodeLabel),
+              decoration:
+                  const InputDecoration(labelText: AppStrings.pairCodeLabel),
             ),
           ],
           const SizedBox(height: 8),
@@ -112,7 +117,8 @@ class _PairScreenState extends State<PairScreen> {
                 color: theme.colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(_error!, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+              child: Text(_error!,
+                  style: TextStyle(color: theme.colorScheme.onErrorContainer)),
             ),
           FilledButton(
             onPressed: _busy ? null : _submit,
@@ -126,7 +132,8 @@ class _PairScreenState extends State<PairScreen> {
           const SizedBox(height: 24),
           Text(
             '配对链接在电脑上生成：DSH → 设置 → 移动访问 → 局域网 → 创建配对密钥。链接几分钟内有效。',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),

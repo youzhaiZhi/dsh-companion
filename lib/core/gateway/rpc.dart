@@ -53,9 +53,11 @@ class RpcClient {
   final Uri origin;
   SessionCredentials _credentials;
 
-  void updateCredentials(SessionCredentials credentials) => _credentials = credentials;
+  void updateCredentials(SessionCredentials credentials) =>
+      _credentials = credentials;
 
-  Future<Object?> call(String endpoint, [Map<String, Object?> args = const <String, Object?>{}]) async {
+  Future<Object?> call(String endpoint,
+      [Map<String, Object?> args = const <String, Object?>{}]) async {
     final rpcId = newRpcId();
     final request = await client.postUrl(origin.resolve('/api'));
     request.headers.contentType = ContentType.json;
@@ -73,17 +75,21 @@ class RpcClient {
       throw const CompanionException('unauthorized', '会话已过期，需要重新连接');
     }
     if (response.statusCode != 200) {
-      throw CompanionException('http_${response.statusCode}', 'RPC 失败（HTTP ${response.statusCode}）', details: text);
+      throw CompanionException(
+          'http_${response.statusCode}', 'RPC 失败（HTTP ${response.statusCode}）',
+          details: text);
     }
     final decoded = jsonDecode(text) as Map<String, dynamic>;
     if (decoded['type'] != 'server-response') {
       throw const CompanionException('bad_response', '网关返回了非 RPC 响应');
     }
-    final result = decoded['result'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final result =
+        decoded['result'] as Map<String, dynamic>? ?? const <String, dynamic>{};
     if (result['ok'] == true) {
       return result['value'];
     }
-    final error = result['error'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final error =
+        result['error'] as Map<String, dynamic>? ?? const <String, dynamic>{};
     throw CompanionException(
       (error['code'] ?? 'rpc_error').toString(),
       (error['message'] ?? 'DSH 返回错误').toString(),
@@ -114,10 +120,12 @@ class MuxClient {
   final Uri origin;
   SessionCredentials _credentials;
   WebSocket? _socket;
-  final Map<String, StreamController<Object?>> _streams = <String, StreamController<Object?>>{};
+  final Map<String, StreamController<Object?>> _streams =
+      <String, StreamController<Object?>>{};
   Future<WebSocket>? _connecting;
 
-  void updateCredentials(SessionCredentials credentials) => _credentials = credentials;
+  void updateCredentials(SessionCredentials credentials) =>
+      _credentials = credentials;
 
   Future<WebSocket> _ensureSocket() {
     final existing = _socket;
@@ -134,8 +142,10 @@ class MuxClient {
       _connecting = null;
       socket.listen(
         _onFrame,
-        onDone: () => _failAll(const CompanionException('stream_closed', '事件流连接已断开')),
-        onError: (Object error) => _failAll(CompanionException('stream_error', '事件流出错：$error')),
+        onDone: () =>
+            _failAll(const CompanionException('stream_closed', '事件流连接已断开')),
+        onError: (Object error) =>
+            _failAll(CompanionException('stream_error', '事件流出错：$error')),
         cancelOnError: false,
       );
       return socket;
@@ -170,7 +180,8 @@ class MuxClient {
         _streams.remove(streamId);
         unawaited(controller.close());
       case 'error':
-        final error = frame['error'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+        final error = frame['error'] as Map<String, dynamic>? ??
+            const <String, dynamic>{};
         _streams.remove(streamId);
         controller.addError(CompanionException(
           (error['code'] ?? 'stream_error').toString(),
@@ -191,7 +202,8 @@ class MuxClient {
   }
 
   /// 打开一条逻辑流，返回 Host 下行项。
-  Stream<Object?> open(String endpoint, [Map<String, Object?> args = const <String, Object?>{}]) {
+  Stream<Object?> open(String endpoint,
+      [Map<String, Object?> args = const <String, Object?>{}]) {
     final streamId = newRpcId();
     final controller = StreamController<Object?>();
     _streams[streamId] = controller;
@@ -199,7 +211,8 @@ class MuxClient {
       _streams.remove(streamId);
       final socket = _socket;
       if (socket != null && socket.readyState == WebSocket.open) {
-        socket.add(jsonEncode(<String, Object?>{'type': 'cancel', 'streamId': streamId}));
+        socket.add(jsonEncode(
+            <String, Object?>{'type': 'cancel', 'streamId': streamId}));
       }
     };
     unawaited(() async {
@@ -213,7 +226,9 @@ class MuxClient {
         }));
       } catch (error) {
         if (_streams.remove(streamId) != null) {
-          controller.addError(error is CompanionException ? error : CompanionException('stream_connect_failed', '$error'));
+          controller.addError(error is CompanionException
+              ? error
+              : CompanionException('stream_connect_failed', '$error'));
           await controller.close();
         }
       }

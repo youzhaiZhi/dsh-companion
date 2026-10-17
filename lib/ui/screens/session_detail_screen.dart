@@ -37,7 +37,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       _input.clear();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(error))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(describeError(error))));
       }
     } finally {
       if (mounted) {
@@ -56,12 +57,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        _scroll.animateTo(_scroll.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
       }
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text(feed?.summary?.title ?? AppStrings.sessionsTitle)),
+      appBar:
+          AppBar(title: Text(feed?.summary?.title ?? AppStrings.sessionsTitle)),
       body: Column(
         children: <Widget>[
           if (feed?.error != null)
@@ -69,21 +72,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               width: double.infinity,
               color: theme.colorScheme.errorContainer,
               padding: const EdgeInsets.all(10),
-              child: Text('${feed!.error}', style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+              child: Text('${feed!.error}',
+                  style: TextStyle(color: theme.colorScheme.onErrorContainer)),
             ),
           Expanded(
             child: events.isEmpty
                 ? Center(
                     child: Text(
                       AppStrings.noMessage,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   )
                 : ListView.builder(
                     controller: _scroll,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 12),
                     itemCount: events.length,
-                    itemBuilder: (context, index) => _EventCard(event: events[index]),
+                    itemBuilder: (context, index) =>
+                        _EventCard(event: events[index]),
                   ),
           ),
           for (final approval in approvals) _ApprovalCard(request: approval),
@@ -100,14 +107,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       minLines: 1,
                       maxLines: 5,
                       textInputAction: TextInputAction.newline,
-                      decoration: const InputDecoration(hintText: AppStrings.sendHint),
+                      decoration:
+                          const InputDecoration(hintText: AppStrings.sendHint),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
                     onPressed: _sending ? null : _send,
                     icon: _sending
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.send),
                   ),
                 ],
@@ -137,15 +148,20 @@ class _EventCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 4),
             padding: const EdgeInsets.all(12),
             constraints: const BoxConstraints(maxWidth: 320),
-            decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(14)),
-            child: Text(event.text ?? '', style: TextStyle(color: scheme.onPrimaryContainer)),
+            decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(14)),
+            child: Text(event.text ?? '',
+                style: TextStyle(color: scheme.onPrimaryContainer)),
           ),
         );
       case SessionEventKind.assistantMessage:
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14)),
           child: Text(event.text ?? '', style: theme.textTheme.bodyMedium),
         );
       case SessionEventKind.toolCall:
@@ -160,9 +176,13 @@ class _EventCard extends StatelessWidget {
           child: Row(
             children: <Widget>[
               Icon(
-                event.toolStatus == 'running' ? Icons.build_circle_outlined : Icons.check_circle_outline,
+                event.toolStatus == 'running'
+                    ? Icons.build_circle_outlined
+                    : Icons.check_circle_outline,
                 size: 18,
-                color: event.toolStatus == 'running' ? scheme.primary : scheme.outline,
+                color: event.toolStatus == 'running'
+                    ? scheme.primary
+                    : scheme.outline,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -182,7 +202,8 @@ class _EventCard extends StatelessWidget {
           child: Center(
             child: Text(
               event.toolStatus == 'running' ? '开始执行…' : '本轮结束',
-              style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
         );
@@ -190,8 +211,11 @@ class _EventCard extends StatelessWidget {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(12)),
-          child: Text(event.text ?? '出错了', style: TextStyle(color: scheme.onErrorContainer)),
+          decoration: BoxDecoration(
+              color: scheme.errorContainer,
+              borderRadius: BorderRadius.circular(12)),
+          child: Text(event.text ?? '出错了',
+              style: TextStyle(color: scheme.onErrorContainer)),
         );
       case SessionEventKind.approvalRequest:
         return const SizedBox.shrink();
@@ -232,10 +256,12 @@ class _ApprovalCard extends StatelessWidget {
                   TextButton(
                     onPressed: () async {
                       try {
-                        await controller.decideApproval(request, ApprovalDecision.deny);
+                        await controller.decideApproval(
+                            request, ApprovalDecision.deny);
                       } catch (error) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(error))));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(describeError(error))));
                         }
                       }
                     },
@@ -245,10 +271,12 @@ class _ApprovalCard extends StatelessWidget {
                   FilledButton(
                     onPressed: () async {
                       try {
-                        await controller.decideApproval(request, ApprovalDecision.allow);
+                        await controller.decideApproval(
+                            request, ApprovalDecision.allow);
                       } catch (error) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(error))));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(describeError(error))));
                         }
                       }
                     },

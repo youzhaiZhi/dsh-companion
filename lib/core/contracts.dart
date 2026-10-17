@@ -364,7 +364,13 @@ class PairingResult {
 }
 
 /// 连接阶段（UI 顶部状态条）。
-enum ConnectionPhase { disconnected, connecting, connected, reconnecting, failed }
+enum ConnectionPhase {
+  disconnected,
+  connecting,
+  connected,
+  reconnecting,
+  failed
+}
 
 /// 应用设置。
 @immutable

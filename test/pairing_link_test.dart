@@ -15,8 +15,10 @@ void main() {
 
     test('缺少 token 时抛 pairing_link_invalid', () {
       expect(
-        () => PairingLink.parse('https://192.168.0.198:3443/mobile-access/pair#instance=abc'),
-        throwsA(isA<CompanionException>().having((e) => e.code, 'code', 'pairing_link_invalid')),
+        () => PairingLink.parse(
+            'https://192.168.0.198:3443/mobile-access/pair#instance=abc'),
+        throwsA(isA<CompanionException>()
+            .having((e) => e.code, 'code', 'pairing_link_invalid')),
       );
     });
 

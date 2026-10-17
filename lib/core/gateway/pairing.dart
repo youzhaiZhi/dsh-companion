@@ -36,15 +36,23 @@ class PairingLink {
     for (final pair in fragment.split('&')) {
       final index = pair.indexOf('=');
       if (index > 0) {
-        params[pair.substring(0, index)] = Uri.decodeComponent(pair.substring(index + 1));
+        params[pair.substring(0, index)] =
+            Uri.decodeComponent(pair.substring(index + 1));
       }
     }
     final instanceId = params['instance'];
     final token = params['token'];
-    if (instanceId == null || instanceId.isEmpty || token == null || token.isEmpty) {
-      throw const CompanionException('pairing_link_invalid', '配对链接缺少 instance 或 token，请重新复制');
+    if (instanceId == null ||
+        instanceId.isEmpty ||
+        token == null ||
+        token.isEmpty) {
+      throw const CompanionException(
+          'pairing_link_invalid', '配对链接缺少 instance 或 token，请重新复制');
     }
-    final origin = Uri(scheme: uri.scheme, host: uri.host, port: uri.hasPort ? uri.port : null);
+    final origin = Uri(
+        scheme: uri.scheme,
+        host: uri.host,
+        port: uri.hasPort ? uri.port : null);
     return PairingLink(origin: origin, instanceId: instanceId, token: token);
   }
 
@@ -63,9 +71,11 @@ Future<Uint8List> fetchGatewayCa(Uri origin) async {
     final request = await client.getUrl(origin.resolve('/ca.cer'));
     final response = await request.close();
     if (response.statusCode != 200) {
-      throw CompanionException('ca_fetch_failed', '网关未返回 CA 证书（HTTP ${response.statusCode}）');
+      throw CompanionException(
+          'ca_fetch_failed', '网关未返回 CA 证书（HTTP ${response.statusCode}）');
     }
-    final bytes = Uint8List.fromList(await response.expand((chunk) => chunk).toList());
+    final bytes =
+        Uint8List.fromList(await response.expand((chunk) => chunk).toList());
     if (bytes.isEmpty) {
       throw const CompanionException('ca_fetch_failed', '网关 CA 证书为空');
     }
@@ -90,8 +100,10 @@ String derToPem(List<int> der) {
 
 /// 只信任配对时固定的私有 CA 的 HttpClient。
 HttpClient pinnedHttpClient(String caPem) {
-  final context = SecurityContext(withTrustedRoots: false)..setTrustedCertificatesBytes(utf8.encode(caPem));
-  final client = HttpClient(context: context)..connectionTimeout = const Duration(seconds: 20);
+  final context = SecurityContext(withTrustedRoots: false)
+    ..setTrustedCertificatesBytes(utf8.encode(caPem));
+  final client = HttpClient(context: context)
+    ..connectionTimeout = const Duration(seconds: 20);
   // 证书链由固定 CA 校验；网关叶子证书可能用 IP SAN，主机名校验失败时也放行，
   // 信任范围仍由“只连配对过的 origin + 固定 CA”限定。
   client.badCertificateCallback = (cert, host, port) => true;
@@ -124,8 +136,11 @@ Future<Map<String, dynamic>> postJson(
   if (response.statusCode >= 200 && response.statusCode < 300) {
     return decoded;
   }
-  final code = (decoded['error'] ?? decoded['code'] ?? 'http_${response.statusCode}').toString();
-  final message = (decoded['message'] ?? '网关请求失败（HTTP ${response.statusCode}）').toString();
+  final code =
+      (decoded['error'] ?? decoded['code'] ?? 'http_${response.statusCode}')
+          .toString();
+  final message =
+      (decoded['message'] ?? '网关请求失败（HTTP ${response.statusCode}）').toString();
   throw CompanionException(code, message, details: decoded);
 }
 
@@ -219,7 +234,8 @@ class PairingClient {
         instanceId: (json['instanceId'] ?? instanceId) as String,
         deviceId: json['deviceId'] as String? ?? '',
         deviceToken: json['deviceToken'] as String? ?? '',
-        deviceExpiresAt: _msToTime(json['deviceExpiresAt'], fallback: DateTime.now().add(const Duration(days: 180))),
+        deviceExpiresAt: _msToTime(json['deviceExpiresAt'],
+            fallback: DateTime.now().add(const Duration(days: 180))),
         sessionToken: json['sessionToken'] as String? ?? '',
         csrfToken: json['csrfToken'] as String? ?? '',
         sessionExpiresAt: _msToTime(json['sessionExpiresAt']),

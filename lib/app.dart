@@ -32,9 +32,12 @@ class DshCompanionApp extends StatelessWidget {
 }
 
 /// 所有页面共用的 controller 取用方式。
-CompanionController watchController(BuildContext context) => context.watch<CompanionController>();
+CompanionController watchController(BuildContext context) =>
+    context.watch<CompanionController>();
 
-CompanionController readController(BuildContext context) => context.read<CompanionController>();
+CompanionController readController(BuildContext context) =>
+    context.read<CompanionController>();
 
 /// 便捷：把异常转成用户可读文案。
-String describeError(Object error) => error is CompanionException ? error.message : '$error';
+String describeError(Object error) =>
+    error is CompanionException ? error.message : '$error';

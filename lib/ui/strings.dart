@@ -6,7 +6,8 @@ import '../core/contracts.dart';
 abstract final class AppStrings {
   static const String appTitle = 'DSH 伴侣';
   static const String devicesEmptyTitle = '还没有配对电脑';
-  static const String devicesEmptyBody = '在电脑上打开 DSH → 设置 → 移动访问 → 局域网，创建配对密钥，把链接粘贴进来。';
+  static const String devicesEmptyBody =
+      '在电脑上打开 DSH → 设置 → 移动访问 → 局域网，创建配对密钥，把链接粘贴进来。';
   static const String addDevice = '配对电脑';
   static const String connect = '连接';
   static const String rename = '重命名';
@@ -14,7 +15,8 @@ abstract final class AppStrings {
   static const String settings = '设置';
   static const String pairTitle = '配对电脑';
   static const String pairLinkLabel = '配对链接';
-  static const String pairLinkHint = 'https://192.168.x.x:3443/mobile-access/pair#instance=...';
+  static const String pairLinkHint =
+      'https://192.168.x.x:3443/mobile-access/pair#instance=...';
   static const String pairPaste = '粘贴';
   static const String pairManual = '手动输入地址与配对码';
   static const String pairOriginLabel = '网关地址';
@@ -64,7 +66,8 @@ Color statusColor(BuildContext context, SessionStatus status) {
   };
 }
 
-String gatewayKindLabel(GatewayKind kind) => kind == GatewayKind.lan ? '局域网' : '远程';
+String gatewayKindLabel(GatewayKind kind) =>
+    kind == GatewayKind.lan ? '局域网' : '远程';
 
 String connectionLabel(ConnectionPhase phase) => switch (phase) {
       ConnectionPhase.connecting => AppStrings.connecting,

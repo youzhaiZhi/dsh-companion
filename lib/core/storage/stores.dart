@@ -10,7 +10,8 @@ import '../contracts.dart';
 /// 设备令牌与固定 CA 属于敏感数据，统一放 `flutter_secure_storage`
 /// （Android 走 Keystore 加密），不落到普通 SharedPreferences。
 class DeviceStore {
-  DeviceStore({FlutterSecureStorage? secure}) : _secure = secure ?? const FlutterSecureStorage();
+  DeviceStore({FlutterSecureStorage? secure})
+      : _secure = secure ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _secure;
   static const String _key = 'dsh_companion_devices_v1';
@@ -22,7 +23,10 @@ class DeviceStore {
     }
     try {
       final list = jsonDecode(raw) as List<dynamic>;
-      return list.whereType<Map<String, dynamic>>().map(_fromJson).toList(growable: false);
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(_fromJson)
+          .toList(growable: false);
     } catch (_) {
       return <DeviceRecord>[];
     }
@@ -50,15 +54,20 @@ class DeviceStore {
   static DeviceRecord _fromJson(Map<String, dynamic> json) => DeviceRecord(
         instanceId: json['instanceId'] as String? ?? '',
         label: json['label'] as String? ?? '电脑',
-        origin: Uri.parse(json['origin'] as String? ?? 'https://127.0.0.1:3443'),
+        origin:
+            Uri.parse(json['origin'] as String? ?? 'https://127.0.0.1:3443'),
         deviceToken: json['deviceToken'] as String? ?? '',
-        kind: (json['kind'] as String?) == GatewayKind.remote.name ? GatewayKind.remote : GatewayKind.lan,
-        deviceExpiresAt: DateTime.fromMillisecondsSinceEpoch((json['deviceExpiresAt'] as num?)?.toInt() ?? 0),
+        kind: (json['kind'] as String?) == GatewayKind.remote.name
+            ? GatewayKind.remote
+            : GatewayKind.lan,
+        deviceExpiresAt: DateTime.fromMillisecondsSinceEpoch(
+            (json['deviceExpiresAt'] as num?)?.toInt() ?? 0),
         caFingerprint: json['caFingerprint'] as String?,
         caPem: json['caPem'] as String?,
         lastConnectedAt: json['lastConnectedAt'] == null
             ? null
-            : DateTime.fromMillisecondsSinceEpoch((json['lastConnectedAt'] as num).toInt()),
+            : DateTime.fromMillisecondsSinceEpoch(
+                (json['lastConnectedAt'] as num).toInt()),
       );
 }
 

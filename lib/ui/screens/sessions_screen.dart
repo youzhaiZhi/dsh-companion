@@ -48,7 +48,8 @@ class SessionsScreen extends StatelessWidget {
               child: Center(
                 child: Text(
                   AppStrings.sessionsEmpty,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
             )
@@ -68,13 +69,15 @@ class SessionsScreen extends StatelessWidget {
                           if (context.mounted) {
                             await Navigator.of(context).push(
                               MaterialPageRoute<void>(
-                                builder: (_) => SessionDetailScreen(sessionId: session.id),
+                                builder: (_) =>
+                                    SessionDetailScreen(sessionId: session.id),
                               ),
                             );
                             await controller.closeSession();
                           }
                         },
-                        title: Text(session.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        title: Text(session.title,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(
                           <String>[
                             statusLabel(session.status),
