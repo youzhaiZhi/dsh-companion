@@ -32,6 +32,7 @@ const EXCLUDE_DIRS = new Set([
   "node_modules",
   ".idea",
   ".vscode",
+  ".scratch",
   "android/.gradle",
   "android/local.properties",
 ]);
