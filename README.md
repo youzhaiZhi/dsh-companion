@@ -1,38 +1,72 @@
 # DSH 伴侣（dsh-companion）
 
-DeepSeek Harness 的 Flutter 轻量伴侣 Android App。
+DeepSeek Harness 的 Flutter 轻量伴侣 Android App —— 手机上查看会话、盯着任务跑、远程审批、随手发一句话让 Agent 继续。
 
-> 施工中。当前仓库还在搭建基础骨架，功能与文档随后补齐。
+![status](https://img.shields.io/badge/status-v0.1.0-4D6BFE)
 
-## 目标
+## 现在能做什么
 
-给 DSH 配一个手机上用得顺手的「遥控器 / 仪表盘」，而不是再套一层 WebView：
+- **配对电脑**：粘贴 dsh-mobile 网关的配对链接（`https://<电脑IP>:3443/mobile-access/pair#instance=...&token=...`），配对一次长期记住；设备令牌与固定 CA 存在 Android Keystore 里。
+- **会话列表**：标题、工作区、状态、最近活动时间，下拉刷新。
+- **会话详情**：`session/follow` 实时事件流（用户/assistant 消息、工具调用卡片、轮次开始/结束、错误）。
+- **快速发消息**：底部输入栏，`session/prompt` 直接发给当前会话。
+- **设置 / 诊断**：主题、通知开关（占位）、协议诊断日志（脱敏，不含令牌）。
 
-- **会话列表**：看得到所有会话、标题、最近活动和运行状态
-- **实时任务状态**：进行中 / 等待输入 / 已完成，流式刷新
-- **通知**：任务完成、等待输入时推系统通知
-- **远程审批**：工具调用、提问卡片，手机上直接批 / 拒 / 选
-- **快速发消息**：选一个会话，发一句话让 Agent 继续干活
+连接层复用已安装的 [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) 插件网关：局域网 HTTPS + 私有 CA 固定 + 设备配对，**不修改 DSH / dsh-mobile 源码**。
 
-连接层复用已安装的 `dsh-mobile` 插件网关：局域网 HTTPS + 设备配对 + 私有 CA 固定，配一次就行，局域网/远程通道都能用。
+## 下载安装
 
-## 构建
-
-APK 由 GitHub Actions 构建（arm64-v8a），发布到本仓库 Release：
-
-- 推送 `main`：跑 analyze / test / build，APK 作为 artifact
-- 手动触发并填写 `release_tag`（或推 `v*` tag）：额外发布 Release
-
-从 Release 下载：
+APK 由 GitHub Actions 构建（arm64-v8a），发布在 [Releases](https://github.com/youzhaiZhi/dsh-companion/releases/latest)：
 
 ```powershell
 gh release download --repo youzhaiZhi/dsh-companion --pattern '*.apk'
 ```
 
+电脑侧准备：DSH → 设置 → 移动访问 → 局域网 → 创建配对密钥 / 复制配对链接（几分钟内有效）。
+手机安装 APK → 点「配对电脑」→ 粘贴链接。
+
+## 当前限制（v0.1.0）
+
+- 审批/提问应答的端点尚未在真机上核实（`approval/decide` 为源码推导），点了可能报错；见 `docs/protocol.md` 第 5、6 节。
+- 系统通知：设置里有开关，当前只做应用内状态提示，Android 本地通知待接入。
+- 二维码扫码：暂用「粘贴链接」，相机扫码后续加。
+- `session/list` / `session/follow` 的字段名做了宽松解析，个别字段（模型、预览）可能为空，等真机联调回填。
+
 ## 开发
 
-本机开发只需要 Flutter SDK（`flutter analyze` / `flutter test`），APK 交给 CI。
-协议调研结论见 `docs/protocol.md`，代码结构见 `docs/app-architecture.md`。
+本机只需要 Flutter SDK 做静态检查；**APK 一律交给 GitHub Actions**（本机没有 Android SDK/JDK）：
+
+```powershell
+# 本地检查（可选，机器内存小，analyze 可能 OOM）
+$env:PUB_HOSTED_URL='https://pub.flutter-io.cn'
+$env:FLUTTER_STORAGE_BASE_URL='https://storage.flutter-io.cn'
+C:\Users\youzhai\flutter\bin\flutter.bat analyze
+
+# 推送代码（本机 github.com:443 不可达，用 Git Data API 推送）
+node scripts\push_github.mjs "feat: ..."
+
+# 触发发布
+gh workflow run build.yml -R youzhaiZhi/dsh-companion -f release_tag=v0.1.1
+```
+
+## 目录
+
+```
+lib/
+  core/contracts.dart          # UI ↔ 核心层契约（模型 + 控制器抽象）
+  core/gateway/pairing.dart    # 配对链接解析、CA 固定、native-pair/renew/probe
+  core/gateway/rpc.dart        # 一元 RPC（POST /api）+ WS mux（/api/remote.mux）
+  core/gateway/companion_gateway_impl.dart  # DSH 返回 → 领域模型映射
+  core/state/                  # CompanionControllerImpl / SessionFeedImpl / 诊断日志
+  core/storage/                # 设备记录（Keystore）/ 设置（SharedPreferences）
+  ui/screens/                  # 设备、配对、会话、详情、设置
+docs/
+  protocol.md                  # ★ 网关协议（配对/认证/RPC/WS + 置信度标注）
+  app-architecture.md          # 架构与团队协作契约
+  dev-environment.md           # 本机环境与推送/构建方式
+.github/workflows/build.yml    # analyze + test + arm64 APK + Release
+scripts/push_github.mjs        # Git Data API 推送（替代 git push）
+```
 
 ## 许可
 
