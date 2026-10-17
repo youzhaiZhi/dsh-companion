@@ -59,8 +59,24 @@ if (!token) {
 
 const message = process.argv.slice(2).join(" ").trim() || "chore: update from local workspace";
 
+async function fetchWithRetry(url, init) {
+  const attempts = 5;
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetch(url, { ...init, signal: AbortSignal.timeout(120000) });
+    } catch (error) {
+      lastError = error;
+      const wait = 2000 * attempt;
+      console.warn(`network error (attempt ${attempt}/${attempts}): ${error.message}; retrying in ${wait}ms`);
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+  }
+  throw lastError;
+}
+
 async function api(method, path, body) {
-  const res = await fetch(`https://api.github.com${path}`, {
+  const res = await fetchWithRetry(`https://api.github.com${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,

@@ -1,0 +1,176 @@
+name: Build Android APK
+
+# 触发方式：
+#   1) push 到 main                -> 构建 + 上传 artifact（不发 Release）
+#   2) push v* tag                 -> 构建 + 发布 Release（tag = tag 名）
+#   3) workflow_dispatch           -> 构建；若填了 release_tag 则额外发布 Release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '发布标签（如 v0.1.0）。留空则只构建并上传 artifact，不发布 Release。'
+        required: false
+        type: string
+        default: ''
+
+# 默认最小权限；只有发布 job 提升为 contents: write。
+permissions:
+  contents: read
+
+# 同一 ref 的构建串行执行；不取消进行中的任务，避免把发布 job 从中间掐断。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.47.7
+  APK_NAME: dsh-companion-arm64.apk
+
+jobs:
+  build:
+    name: Build Release APK (arm64-v8a)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # push_github.mjs 通过 Git Data API 建树，所有文件都是 100644；gradlew 需要可执行位。
+      - name: Fix gradle wrapper permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
+          ls -l android/gradlew 2>/dev/null || echo "no android/gradlew (flutter will inject one)"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Show toolchain versions
+        run: |
+          flutter --version
+          java -version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      # Gradle 依赖缓存放这里；Flutter SDK / pub 缓存由 subosito/flutter-action 的 cache 负责。
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK (arm64-v8a only)
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Verify ABI (arm64-v8a only) and stage artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find build/app/outputs/flutter-apk -maxdepth 1 -name '*-release.apk' | head -n1)
+          if [ -z "$APK" ]; then
+            echo "::error::release APK not found under build/app/outputs/flutter-apk"
+            ls -la build/app/outputs/flutter-apk 2>/dev/null || true
+            exit 1
+          fi
+          echo "APK: $APK ($(du -h "$APK" | cut -f1))"
+
+          ABIS=$(unzip -Z1 "$APK" | grep -E '^lib/' | cut -d/ -f2 | sort -u || true)
+          echo "ABIs in APK:"
+          echo "${ABIS:-(none)}"
+          if [ "$ABIS" != "arm64-v8a" ]; then
+            echo "::error::unexpected ABI set in APK: ${ABIS:-<empty>} (want only arm64-v8a)"
+            exit 1
+          fi
+          unzip -Z1 "$APK" | grep -q '^lib/arm64-v8a/libflutter.so' \
+            || { echo "::error::lib/arm64-v8a/libflutter.so missing"; exit 1; }
+
+          mkdir -p dist
+          cp "$APK" "dist/${APK_NAME}"
+          sha256sum "dist/${APK_NAME}"
+
+      - name: Verify APK is signed (installable)
+        shell: bash
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n1 || true)
+          if [ -n "$APKSIGNER" ] && [ -x "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs "dist/${APK_NAME}"
+          else
+            echo "apksigner not found; skipping signature verification"
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-companion-arm64
+          path: dist/dsh-companion-arm64.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    # tag push，或 workflow_dispatch 且显式填写 release_tag 时才发布。
+    if: >-
+      needs.build.result == 'success' &&
+      (startsWith(github.ref, 'refs/tags/v') ||
+       (github.event_name == 'workflow_dispatch' && inputs.release_tag != ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="$REF_NAME"
+          fi
+          TAG="${TAG#refs/tags/}"
+          case "$TAG" in
+            v*) ;;
+            *) echo "::error::release tag must start with 'v' (got '$TAG')"; exit 1 ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "releasing tag: $TAG"
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dsh-companion-arm64
+          path: dist
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: DSH 伴侣 ${{ steps.tag.outputs.tag }}
+          files: dist/dsh-companion-arm64.apk
+          fail_on_unmatched_files: true
+          generate_release_notes: true
