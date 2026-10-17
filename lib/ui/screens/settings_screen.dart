@@ -95,7 +95,7 @@ class SettingsScreen extends StatelessWidget {
           const ListTile(
             leading: Icon(Icons.info_outline),
             title: Text('版本'),
-            subtitle: Text('DSH 伴侣 0.1.0'),
+            subtitle: Text('DSH 伴侣 0.2.0'),
           ),
         ],
       ),
