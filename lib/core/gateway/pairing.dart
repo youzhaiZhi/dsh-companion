@@ -65,7 +65,7 @@ Future<Uint8List> fetchGatewayCa(Uri origin) async {
     if (response.statusCode != 200) {
       throw CompanionException('ca_fetch_failed', '网关未返回 CA 证书（HTTP ${response.statusCode}）');
     }
-    final bytes = await response.expand((chunk) => chunk).toList();
+    final bytes = Uint8List.fromList(await response.expand((chunk) => chunk).toList());
     if (bytes.isEmpty) {
       throw const CompanionException('ca_fetch_failed', '网关 CA 证书为空');
     }
