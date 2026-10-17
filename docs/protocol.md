@@ -108,7 +108,22 @@ host → client:
 | 审批应答 | `approval/decide` | `{sessionId, approvalId, outcome:'approved'\|'denied'\|'cancelled'}` | — | 🔴 端点名/裁决字段未确认 |
 | 事件名 | — | — | `turn/start`,`turn/end`,`user/message`,`assistant/message`,`tool/call`,`tool/result`,`approval/asked`,`approval/decided`,`job/registered`,`job/settled`,`session/title` | ✅ `SessionEventMap` |
 
-## 6. 已知不确定项（下一步真机验证）
+## 6. 通知与状态折叠（App 侧逻辑）
+
+App 不做协议层的额外订阅，只把 `session/follow` 的事件折叠成列表状态，再据此发系统通知：
+
+| 事件 | 列表状态 | 通知 |
+| --- | --- | --- |
+| `turn/start` | running | 无 |
+| `turn/end` | idle | 「DSH 任务已完成」（`notifyOnComplete`） |
+| `approval/asked` | waitingInput | 「DSH 等待你的输入」（`notifyOnWaiting`） |
+| `error` | idle | 无 |
+
+- 只在**状态真的变化**时触发，避免同一状态多次提醒。
+- 通知总开关与分类开关都在设置页，存 `SharedPreferences`。
+- 通知依赖 App 进程存活（没有后台常驻/FCM），进程被回收后收不到。
+
+## 7. 已知不确定项（下一步真机验证）
 
 1. `session/list` 的实际行字段（标题取 `title` 还是 `displayTitle`；运行状态字段名）。
 2. `session/follow` 的 args 形态（`sessionId` / `address.sessionId` / `address:{kind,sessionId}`）与 opening 快照结构。
@@ -117,7 +132,7 @@ host → client:
 
 验证方法：本地 `tools/mock-gateway`（进行中）+ 真机配对后用 `scripts/probe` 发只读请求，把实际 JSON 回填到本文档。
 
-## 7. 参考源码位置
+## 8. 参考源码位置
 
 - dsh-mobile 网关：`~/.dsh/profiles/desktop/node_modules/dsh-mobile/lib/index.mjs`（TS 源码在 sourcemap 中）
 - DSH 客户端包（`@deepseek-ai/dsh-api-gateway`、`dsh-client-connection`、`dsh-api-session-controller`、`dsh-client-ui-*`）：`tools/mock-gateway/.scratch/dsh-pkgs/`（本地研究用，不入库）

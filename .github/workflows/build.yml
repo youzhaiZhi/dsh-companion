@@ -120,6 +120,22 @@ jobs:
             echo "apksigner not found; skipping signature verification"
           fi
 
+      - name: Verify manifest (permissions and app identity)
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAPT2=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n1 || true)
+          if [ -z "$AAPT2" ]; then
+            echo "aapt2 not found; cannot dump manifest"
+            exit 1
+          fi
+          MANIFEST=$("$AAPT2" dump xmltree --file AndroidManifest.xml "dist/${APK_NAME}")
+          for permission in INTERNET POST_NOTIFICATIONS; do
+            echo "$MANIFEST" | grep -q "android.permission.${permission}" \
+              || { echo "::error::missing permission ${permission}"; exit 1; }
+          done
+          echo "permissions OK"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
