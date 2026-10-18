@@ -36,8 +36,9 @@ class PairingLink {
     for (final pair in fragment.split('&')) {
       final index = pair.indexOf('=');
       if (index > 0) {
-        params[pair.substring(0, index)] =
-            Uri.decodeComponent(pair.substring(index + 1));
+        params[pair.substring(0, index)] = Uri.decodeComponent(
+          pair.substring(index + 1),
+        );
       }
     }
     final instanceId = params['instance'];
@@ -47,12 +48,15 @@ class PairingLink {
         token == null ||
         token.isEmpty) {
       throw const CompanionException(
-          'pairing_link_invalid', '配对链接缺少 instance 或 token，请重新复制');
+        'pairing_link_invalid',
+        '配对链接缺少 instance 或 token，请重新复制',
+      );
     }
     final origin = Uri(
-        scheme: uri.scheme,
-        host: uri.host,
-        port: uri.hasPort ? uri.port : null);
+      scheme: uri.scheme,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+    );
     return PairingLink(origin: origin, instanceId: instanceId, token: token);
   }
 
@@ -64,18 +68,22 @@ String sha256Hex(List<int> bytes) => sha256.convert(bytes).toString();
 
 /// 从网关取私有 CA（DER）。只用于核对指纹，不携带任何凭据。
 Future<Uint8List> fetchGatewayCa(Uri origin) async {
-  final client = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 15)
-    ..badCertificateCallback = (cert, host, port) => true;
+  final client =
+      HttpClient()
+        ..connectionTimeout = const Duration(seconds: 15)
+        ..badCertificateCallback = (cert, host, port) => true;
   try {
     final request = await client.getUrl(origin.resolve('/ca.cer'));
     final response = await request.close();
     if (response.statusCode != 200) {
       throw CompanionException(
-          'ca_fetch_failed', '网关未返回 CA 证书（HTTP ${response.statusCode}）');
+        'ca_fetch_failed',
+        '网关未返回 CA 证书（HTTP ${response.statusCode}）',
+      );
     }
-    final bytes =
-        Uint8List.fromList(await response.expand((chunk) => chunk).toList());
+    final bytes = Uint8List.fromList(
+      await response.expand((chunk) => chunk).toList(),
+    );
     if (bytes.isEmpty) {
       throw const CompanionException('ca_fetch_failed', '网关 CA 证书为空');
     }
@@ -234,8 +242,10 @@ class PairingClient {
         instanceId: (json['instanceId'] ?? instanceId) as String,
         deviceId: json['deviceId'] as String? ?? '',
         deviceToken: json['deviceToken'] as String? ?? '',
-        deviceExpiresAt: _msToTime(json['deviceExpiresAt'],
-            fallback: DateTime.now().add(const Duration(days: 180))),
+        deviceExpiresAt: _msToTime(
+          json['deviceExpiresAt'],
+          fallback: DateTime.now().add(const Duration(days: 180)),
+        ),
         sessionToken: json['sessionToken'] as String? ?? '',
         csrfToken: json['csrfToken'] as String? ?? '',
         sessionExpiresAt: _msToTime(json['sessionExpiresAt']),

@@ -15,7 +15,7 @@ abstract class TaskNotifierApi {
 /// 这样 widget/单元测试不需要平台通道。
 class TaskNotifier implements TaskNotifierApi {
   TaskNotifier({FlutterLocalNotificationsPlugin? plugin})
-      : _providedPlugin = plugin;
+    : _providedPlugin = plugin;
 
   final FlutterLocalNotificationsPlugin? _providedPlugin;
   FlutterLocalNotificationsPlugin? _plugin;
@@ -37,8 +37,11 @@ class TaskNotifier implements TaskNotifierApi {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
     await plugin.initialize(settings);
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android =
+        plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
         _channelId,

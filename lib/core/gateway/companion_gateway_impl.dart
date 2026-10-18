@@ -24,10 +24,7 @@ class LiveCompanionGateway {
   bool get isConnected => _rpc != null;
 
   /// 配对：校验 CA 指纹后换取长期设备令牌。
-  Future<PairingOutcome> pair({
-    required PairingLink link,
-    String? label,
-  }) {
+  Future<PairingOutcome> pair({required PairingLink link, String? label}) {
     return _pairing.pair(
       origin: link.origin,
       instanceId: link.instanceId,
@@ -48,9 +45,15 @@ class LiveCompanionGateway {
     );
     final http = pinnedHttpClient(device.caPem!);
     _rpc = RpcClient(
-        client: http, origin: device.origin, credentials: credentials);
+      client: http,
+      origin: device.origin,
+      credentials: credentials,
+    );
     _mux = MuxClient(
-        client: http, origin: device.origin, credentials: credentials);
+      client: http,
+      origin: device.origin,
+      credentials: credentials,
+    );
     _events = HostEventsClient(mux: _mux!, rpc: _rpc!);
     _events!.start();
   }
@@ -63,17 +66,20 @@ class LiveCompanionGateway {
       if (id.isEmpty) {
         continue;
       }
-      sessions.add(SessionSummary(
-        id: id,
-        title: (row['title'] ?? row['displayTitle'] ?? row['cwd'] ?? id)
-            .toString(),
-        workspace: row['cwd']?.toString(),
-        model: row['model']?.toString(),
-        preview: row['preview']?.toString(),
-        status: _statusOf(row),
-        updatedAt:
-            _time(row['updatedAt'] ?? row['lastPromptAt']) ?? DateTime.now(),
-      ));
+      sessions.add(
+        SessionSummary(
+          id: id,
+          title:
+              (row['title'] ?? row['displayTitle'] ?? row['cwd'] ?? id)
+                  .toString(),
+          workspace: row['cwd']?.toString(),
+          model: row['model']?.toString(),
+          preview: row['preview']?.toString(),
+          status: _statusOf(row),
+          updatedAt:
+              _time(row['updatedAt'] ?? row['lastPromptAt']) ?? DateTime.now(),
+        ),
+      );
     }
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions;
@@ -81,8 +87,9 @@ class LiveCompanionGateway {
 
   /// 会话事件流（`session/follow`）。opening 与增量都按事件映射。
   Stream<SessionEvent> watchSession(String sessionId) {
-    final stream = _requireMux()
-        .open('session/follow', <String, Object?>{'sessionId': sessionId});
+    final stream = _requireMux().open('session/follow', <String, Object?>{
+      'sessionId': sessionId,
+    });
     return stream.expand<Object?>(_flattenFollowers).map(_toEvent);
   }
 
@@ -132,9 +139,9 @@ class LiveCompanionGateway {
 
   /// 当前待应答的审批。
   List<PendingApproval> get pendingApprovals => <PendingApproval>[
-        for (final frame in _events?.pending ?? const <HostWaterfallEvent>[])
-          if (approvalFromWaterfall(frame) case final approval?) approval,
-      ];
+    for (final frame in _events?.pending ?? const <HostWaterfallEvent>[])
+      if (approvalFromWaterfall(frame) case final approval?) approval,
+  ];
 
   Future<void> close() async {
     await _events?.dispose();
@@ -202,31 +209,35 @@ class LiveCompanionGateway {
     final now = DateTime.now();
     if (raw is! Map<String, dynamic>) {
       return SessionEvent(
-          id: newRpcId(),
-          kind: SessionEventKind.unknown,
-          at: now,
-          text: raw?.toString());
+        id: newRpcId(),
+        kind: SessionEventKind.unknown,
+        at: now,
+        text: raw?.toString(),
+      );
     }
     final type = (raw['type'] ?? 'unknown').toString();
-    final data = raw['data'] is Map<String, dynamic>
-        ? raw['data']! as Map<String, dynamic>
-        : const <String, dynamic>{};
+    final data =
+        raw['data'] is Map<String, dynamic>
+            ? raw['data']! as Map<String, dynamic>
+            : const <String, dynamic>{};
     final seq = raw['seq'];
     final id = seq != null ? '$type-$seq' : newRpcId();
 
     switch (type) {
       case 'user/message':
         return SessionEvent(
-            id: id,
-            kind: SessionEventKind.userMessage,
-            at: now,
-            text: _textOf(data['message'] ?? data));
+          id: id,
+          kind: SessionEventKind.userMessage,
+          at: now,
+          text: _textOf(data['message'] ?? data),
+        );
       case 'assistant/message':
         return SessionEvent(
-            id: id,
-            kind: SessionEventKind.assistantMessage,
-            at: now,
-            text: _textOf(data['message'] ?? data));
+          id: id,
+          kind: SessionEventKind.assistantMessage,
+          at: now,
+          text: _textOf(data['message'] ?? data),
+        );
       case 'tool/call':
         return SessionEvent(
           id: id,
@@ -256,10 +267,11 @@ class LiveCompanionGateway {
         );
       case 'turn/start':
         return SessionEvent(
-            id: id,
-            kind: SessionEventKind.statusChange,
-            at: now,
-            toolStatus: 'running');
+          id: id,
+          kind: SessionEventKind.statusChange,
+          at: now,
+          toolStatus: 'running',
+        );
       case 'turn/end':
         return SessionEvent(
           id: id,
@@ -270,17 +282,19 @@ class LiveCompanionGateway {
         );
       case 'error':
         return SessionEvent(
-            id: id,
-            kind: SessionEventKind.error,
-            at: now,
-            text: data['message']?.toString() ?? type);
+          id: id,
+          kind: SessionEventKind.error,
+          at: now,
+          text: data['message']?.toString() ?? type,
+        );
       default:
         return SessionEvent(
-            id: id,
-            kind: SessionEventKind.unknown,
-            at: now,
-            text: type,
-            meta: data);
+          id: id,
+          kind: SessionEventKind.unknown,
+          at: now,
+          text: type,
+          meta: data,
+        );
     }
   }
 
@@ -294,11 +308,12 @@ class LiveCompanionGateway {
         return content;
       }
       if (content is List) {
-        final joined = content
-            .whereType<Map<Object?, Object?>>()
-            .map((part) => part['text'] ?? part['content'])
-            .whereType<String>()
-            .join();
+        final joined =
+            content
+                .whereType<Map<Object?, Object?>>()
+                .map((part) => part['text'] ?? part['content'])
+                .whereType<String>()
+                .join();
         if (joined.isNotEmpty) {
           return joined;
         }

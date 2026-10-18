@@ -11,8 +11,8 @@ class FakeCompanionController extends CompanionController {
     this.activeDevice,
     this.activeFeed,
     this.initializing = false,
-  })  : _devices = List<DeviceRecord>.from(devices),
-        _sessions = List<SessionSummary>.from(sessions);
+  }) : _devices = List<DeviceRecord>.from(devices),
+       _sessions = List<SessionSummary>.from(sessions);
 
   final List<DeviceRecord> _devices;
   final List<SessionSummary> _sessions;
@@ -93,8 +93,11 @@ class FakeCompanionController extends CompanionController {
   }
 
   @override
-  Future<PairingResult> pairWithCode(
-      {required Uri origin, required String code, String? label}) async {
+  Future<PairingResult> pairWithCode({
+    required Uri origin,
+    required String code,
+    String? label,
+  }) async {
     _record('pairWithCode:$origin:$code');
     return _pairingResult;
   }
@@ -173,8 +176,8 @@ class FakeSessionFeed extends SessionFeed {
     List<ApprovalRequest> approvals = const <ApprovalRequest>[],
     this.phase = ConnectionPhase.connected,
     this.error,
-  })  : _events = List<SessionEvent>.from(events),
-        _approvals = List<ApprovalRequest>.from(approvals);
+  }) : _events = List<SessionEvent>.from(events),
+       _approvals = List<ApprovalRequest>.from(approvals);
 
   @override
   final String sessionId;

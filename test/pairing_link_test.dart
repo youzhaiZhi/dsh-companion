@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('PairingLink.parse', () {
     test('解析标准 dsh-mobile 配对链接', () {
-      const raw = 'https://192.168.0.198:3443/mobile-access/pair'
+      const raw =
+          'https://192.168.0.198:3443/mobile-access/pair'
           '#instance=abc123def&token=-2lhzuFdc23tSfWksOrF';
       final link = PairingLink.parse(raw);
       expect(link.origin, Uri.parse('https://192.168.0.198:3443'));
@@ -16,9 +17,15 @@ void main() {
     test('缺少 token 时抛 pairing_link_invalid', () {
       expect(
         () => PairingLink.parse(
-            'https://192.168.0.198:3443/mobile-access/pair#instance=abc'),
-        throwsA(isA<CompanionException>()
-            .having((e) => e.code, 'code', 'pairing_link_invalid')),
+          'https://192.168.0.198:3443/mobile-access/pair#instance=abc',
+        ),
+        throwsA(
+          isA<CompanionException>().having(
+            (e) => e.code,
+            'code',
+            'pairing_link_invalid',
+          ),
+        ),
       );
     });
 

@@ -14,13 +14,13 @@ Widget _wrap(Widget child, FakeCompanionController controller) {
 }
 
 ApprovalRequest _approval(String id, String sessionId) => ApprovalRequest(
-      id: id,
-      sessionId: sessionId,
-      kind: ApprovalKind.tool,
-      title: 'bash',
-      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-      toolName: 'bash',
-    );
+  id: id,
+  sessionId: sessionId,
+  kind: ApprovalKind.tool,
+  title: 'bash',
+  createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+  toolName: 'bash',
+);
 
 void main() {
   group('待审批提示', () {
@@ -31,19 +31,23 @@ void main() {
     });
 
     testWidgets('有审批时显示数量与处理入口', (tester) async {
-      final controller = FakeCompanionController()
-        ..pendingApprovalsOverride = <ApprovalRequest>[
-          _approval('e1', 's1'),
-          _approval('e2', 's1'),
-        ];
+      final controller =
+          FakeCompanionController()
+            ..pendingApprovalsOverride = <ApprovalRequest>[
+              _approval('e1', 's1'),
+              _approval('e2', 's1'),
+            ];
       await tester.pumpWidget(_wrap(const SessionsScreen(), controller));
       expect(find.text('有 2 个请求等待你审批'), findsOneWidget);
       expect(find.text('去处理'), findsOneWidget);
     });
 
     testWidgets('点击去处理会打开对应会话', (tester) async {
-      final controller = FakeCompanionController()
-        ..pendingApprovalsOverride = <ApprovalRequest>[_approval('e1', 's7')];
+      final controller =
+          FakeCompanionController()
+            ..pendingApprovalsOverride = <ApprovalRequest>[
+              _approval('e1', 's7'),
+            ];
       await tester.pumpWidget(_wrap(const SessionsScreen(), controller));
       await tester.tap(find.text('去处理'));
       await tester.pumpAndSettle();

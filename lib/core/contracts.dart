@@ -94,16 +94,16 @@ class DeviceRecord {
 
   @override
   int get hashCode => Object.hash(
-        instanceId,
-        label,
-        origin,
-        deviceToken,
-        kind,
-        deviceExpiresAt,
-        caFingerprint,
-        caPem,
-        lastConnectedAt,
-      );
+    instanceId,
+    label,
+    origin,
+    deviceToken,
+    kind,
+    deviceExpiresAt,
+    caFingerprint,
+    caPem,
+    lastConnectedAt,
+  );
 
   /// 调试输出不含令牌。
   @override
@@ -189,15 +189,15 @@ class SessionSummary {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        title,
-        status,
-        updatedAt,
-        workspace,
-        model,
-        preview,
-        unread,
-      );
+    id,
+    title,
+    status,
+    updatedAt,
+    workspace,
+    model,
+    preview,
+    unread,
+  );
 }
 
 /// 事件流里的一条事件。
@@ -369,7 +369,7 @@ enum ConnectionPhase {
   connecting,
   connected,
   reconnecting,
-  failed
+  failed,
 }
 
 /// 应用设置。

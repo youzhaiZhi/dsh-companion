@@ -37,15 +37,17 @@ void main() {
       final controller = FakeCompanionController(
         sessions: <SessionSummary>[
           SessionSummary(
-              id: 's1',
-              title: '重构搜索插件',
-              status: SessionStatus.running,
-              updatedAt: now),
+            id: 's1',
+            title: '重构搜索插件',
+            status: SessionStatus.running,
+            updatedAt: now,
+          ),
           SessionSummary(
-              id: 's2',
-              title: '写周报',
-              status: SessionStatus.waitingInput,
-              updatedAt: now),
+            id: 's2',
+            title: '写周报',
+            status: SessionStatus.waitingInput,
+            updatedAt: now,
+          ),
         ],
       );
       await tester.pumpWidget(_wrap(const SessionsScreen(), controller));
@@ -56,8 +58,9 @@ void main() {
     });
 
     testWidgets('连接错误时显示重试入口', (tester) async {
-      final controller =
-          FakeCompanionController(connectionError: '会话已过期，需要重新连接');
+      final controller = FakeCompanionController(
+        connectionError: '会话已过期，需要重新连接',
+      );
       await tester.pumpWidget(_wrap(const SessionsScreen(), controller));
       expect(find.text('会话已过期，需要重新连接'), findsOneWidget);
       expect(find.text('重试'), findsOneWidget);
@@ -66,8 +69,10 @@ void main() {
 
   group('describeError', () {
     test('CompanionException 展示 message', () {
-      expect(describeError(const CompanionException('code', '对方电脑已拒绝')),
-          '对方电脑已拒绝');
+      expect(
+        describeError(const CompanionException('code', '对方电脑已拒绝')),
+        '对方电脑已拒绝',
+      );
     });
 
     test('普通异常回落到 toString', () {

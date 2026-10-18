@@ -56,18 +56,24 @@ class RpcClient {
   void updateCredentials(SessionCredentials credentials) =>
       _credentials = credentials;
 
-  Future<Object?> call(String endpoint,
-      [Map<String, Object?> args = const <String, Object?>{}]) async {
+  Future<Object?> call(
+    String endpoint, [
+    Map<String, Object?> args = const <String, Object?>{},
+  ]) async {
     final rpcId = newRpcId();
     final request = await client.postUrl(origin.resolve('/api'));
     request.headers.contentType = ContentType.json;
     _credentials.requestHeaders(mutating: true).forEach(request.headers.set);
-    request.add(utf8.encode(jsonEncode(<String, Object?>{
-      'type': 'client-request',
-      'rpcId': rpcId,
-      'method': endpoint,
-      'payload': <String, Object?>{'args': args},
-    })));
+    request.add(
+      utf8.encode(
+        jsonEncode(<String, Object?>{
+          'type': 'client-request',
+          'rpcId': rpcId,
+          'method': endpoint,
+          'payload': <String, Object?>{'args': args},
+        }),
+      ),
+    );
 
     final response = await request.close();
     final text = await utf8.decoder.bind(response).join();
@@ -76,8 +82,10 @@ class RpcClient {
     }
     if (response.statusCode != 200) {
       throw CompanionException(
-          'http_${response.statusCode}', 'RPC 失败（HTTP ${response.statusCode}）',
-          details: text);
+        'http_${response.statusCode}',
+        'RPC 失败（HTTP ${response.statusCode}）',
+        details: text,
+      );
     }
     final decoded = jsonDecode(text) as Map<String, dynamic>;
     if (decoded['type'] != 'server-response') {
@@ -133,26 +141,32 @@ class MuxClient {
       return Future<WebSocket>.value(existing);
     }
     return _connecting ??= WebSocket.connect(
-      origin.replace(scheme: 'wss', path: '/api/remote.mux').toString(),
-      headers: _credentials.requestHeaders(),
-      customClient: client,
-      compression: CompressionOptions.compressionOff,
-    ).then((socket) {
-      _socket = socket;
-      _connecting = null;
-      socket.listen(
-        _onFrame,
-        onDone: () =>
-            _failAll(const CompanionException('stream_closed', '事件流连接已断开')),
-        onError: (Object error) =>
-            _failAll(CompanionException('stream_error', '事件流出错：$error')),
-        cancelOnError: false,
-      );
-      return socket;
-    }).catchError((Object error) {
-      _connecting = null;
-      throw CompanionException('stream_connect_failed', '无法连接事件流：$error');
-    });
+          origin.replace(scheme: 'wss', path: '/api/remote.mux').toString(),
+          headers: _credentials.requestHeaders(),
+          customClient: client,
+          compression: CompressionOptions.compressionOff,
+        )
+        .then((socket) {
+          _socket = socket;
+          _connecting = null;
+          socket.listen(
+            _onFrame,
+            onDone:
+                () => _failAll(
+                  const CompanionException('stream_closed', '事件流连接已断开'),
+                ),
+            onError:
+                (Object error) => _failAll(
+                  CompanionException('stream_error', '事件流出错：$error'),
+                ),
+            cancelOnError: false,
+          );
+          return socket;
+        })
+        .catchError((Object error) {
+          _connecting = null;
+          throw CompanionException('stream_connect_failed', '无法连接事件流：$error');
+        });
   }
 
   void _onFrame(dynamic data) {
@@ -180,13 +194,16 @@ class MuxClient {
         _streams.remove(streamId);
         unawaited(controller.close());
       case 'error':
-        final error = frame['error'] as Map<String, dynamic>? ??
+        final error =
+            frame['error'] as Map<String, dynamic>? ??
             const <String, dynamic>{};
         _streams.remove(streamId);
-        controller.addError(CompanionException(
-          (error['code'] ?? 'stream_error').toString(),
-          (error['message'] ?? '事件流错误').toString(),
-        ));
+        controller.addError(
+          CompanionException(
+            (error['code'] ?? 'stream_error').toString(),
+            (error['message'] ?? '事件流错误').toString(),
+          ),
+        );
         unawaited(controller.close());
     }
   }
@@ -202,8 +219,10 @@ class MuxClient {
   }
 
   /// 打开一条逻辑流，返回 Host 下行项。
-  Stream<Object?> open(String endpoint,
-      [Map<String, Object?> args = const <String, Object?>{}]) {
+  Stream<Object?> open(
+    String endpoint, [
+    Map<String, Object?> args = const <String, Object?>{},
+  ]) {
     final streamId = newRpcId();
     final controller = StreamController<Object?>();
     _streams[streamId] = controller;
@@ -211,24 +230,29 @@ class MuxClient {
       _streams.remove(streamId);
       final socket = _socket;
       if (socket != null && socket.readyState == WebSocket.open) {
-        socket.add(jsonEncode(
-            <String, Object?>{'type': 'cancel', 'streamId': streamId}));
+        socket.add(
+          jsonEncode(<String, Object?>{'type': 'cancel', 'streamId': streamId}),
+        );
       }
     };
     unawaited(() async {
       try {
         final socket = await _ensureSocket();
-        socket.add(jsonEncode(<String, Object?>{
-          'type': 'open',
-          'streamId': streamId,
-          'endpoint': endpoint,
-          'payload': <String, Object?>{'args': args},
-        }));
+        socket.add(
+          jsonEncode(<String, Object?>{
+            'type': 'open',
+            'streamId': streamId,
+            'endpoint': endpoint,
+            'payload': <String, Object?>{'args': args},
+          }),
+        );
       } catch (error) {
         if (_streams.remove(streamId) != null) {
-          controller.addError(error is CompanionException
-              ? error
-              : CompanionException('stream_connect_failed', '$error'));
+          controller.addError(
+            error is CompanionException
+                ? error
+                : CompanionException('stream_connect_failed', '$error'),
+          );
           await controller.close();
         }
       }

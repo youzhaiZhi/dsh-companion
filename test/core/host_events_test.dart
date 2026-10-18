@@ -69,24 +69,25 @@ void main() {
     HostWaterfallEvent frame({
       String event = 'approval/request',
       Map<String, Object?> request = const <String, Object?>{
-        'toolName': 'bash'
+        'toolName': 'bash',
       },
-    }) =>
-        HostWaterfallEvent(
-          event: event,
-          eventId: 'evt-1',
-          agentId: 'agent-1',
-          request: request,
-        );
+    }) => HostWaterfallEvent(
+      event: event,
+      eventId: 'evt-1',
+      agentId: 'agent-1',
+      request: request,
+    );
 
     test('approval/request 映射成待审批项', () {
-      final approval = approvalFromWaterfall(frame(
-        request: <String, Object?>{
-          'toolName': 'bash',
-          'reason': '要跑命令',
-          'callId': 'call-7',
-        },
-      ));
+      final approval = approvalFromWaterfall(
+        frame(
+          request: <String, Object?>{
+            'toolName': 'bash',
+            'reason': '要跑命令',
+            'callId': 'call-7',
+          },
+        ),
+      );
       expect(approval, isNotNull);
       expect(approval!.toolName, 'bash');
       expect(approval.reason, '要跑命令');
@@ -109,9 +110,8 @@ void main() {
     });
 
     test('缺 toolName 时给可读兜底标题', () {
-      final approval = approvalFromWaterfall(
-        frame(request: const <String, Object?>{}),
-      )!;
+      final approval =
+          approvalFromWaterfall(frame(request: const <String, Object?>{}))!;
       expect(approval.toolName, '工具调用');
       expect(approval.toApprovalRequest().title, '工具调用');
     });
@@ -136,12 +136,14 @@ void main() {
         contains('emit'),
       );
       expect(
-        describeHostEvent(const HostWaterfallEvent(
-          event: 'approval/request',
-          eventId: 'e1',
-          agentId: 'a1',
-          request: <String, Object?>{},
-        )),
+        describeHostEvent(
+          const HostWaterfallEvent(
+            event: 'approval/request',
+            eventId: 'e1',
+            agentId: 'a1',
+            request: <String, Object?>{},
+          ),
+        ),
         contains('waterfall'),
       );
       expect(

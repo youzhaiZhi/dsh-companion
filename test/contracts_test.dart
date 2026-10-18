@@ -20,9 +20,17 @@ void main() {
     test('相等性按值比较', () {
       final time = DateTime.fromMillisecondsSinceEpoch(42);
       final a = SessionSummary(
-          id: 's', title: 't', status: SessionStatus.idle, updatedAt: time);
+        id: 's',
+        title: 't',
+        status: SessionStatus.idle,
+        updatedAt: time,
+      );
       final b = SessionSummary(
-          id: 's', title: 't', status: SessionStatus.idle, updatedAt: time);
+        id: 's',
+        title: 't',
+        status: SessionStatus.idle,
+        updatedAt: time,
+      );
       expect(a, b);
       expect(a.hashCode, b.hashCode);
     });

@@ -20,9 +20,12 @@ class SessionsScreen extends StatelessWidget {
           IconButton(
             tooltip: AppStrings.settings,
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                ),
           ),
         ],
       ),
@@ -31,9 +34,7 @@ class SessionsScreen extends StatelessWidget {
           if (controller.pendingApprovals.isNotEmpty)
             MaterialBanner(
               leading: const Icon(Icons.pending_actions),
-              content: Text(
-                '有 ${controller.pendingApprovals.length} 个请求等待你审批',
-              ),
+              content: Text('有 ${controller.pendingApprovals.length} 个请求等待你审批'),
               actions: <Widget>[
                 TextButton(
                   onPressed: () async {
@@ -42,8 +43,10 @@ class SessionsScreen extends StatelessWidget {
                     if (context.mounted) {
                       await Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) =>
-                              SessionDetailScreen(sessionId: first.sessionId),
+                          builder:
+                              (_) => SessionDetailScreen(
+                                sessionId: first.sessionId,
+                              ),
                         ),
                       );
                     }
@@ -72,8 +75,9 @@ class SessionsScreen extends StatelessWidget {
               child: Center(
                 child: Text(
                   AppStrings.sessionsEmpty,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             )
@@ -93,15 +97,20 @@ class SessionsScreen extends StatelessWidget {
                           if (context.mounted) {
                             await Navigator.of(context).push(
                               MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    SessionDetailScreen(sessionId: session.id),
+                                builder:
+                                    (_) => SessionDetailScreen(
+                                      sessionId: session.id,
+                                    ),
                               ),
                             );
                             await controller.closeSession();
                           }
                         },
-                        title: Text(session.title,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        title: Text(
+                          session.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         subtitle: Text(
                           <String>[
                             statusLabel(session.status),

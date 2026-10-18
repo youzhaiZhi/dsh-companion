@@ -22,16 +22,20 @@ void main() {
   group('sessionStatusAfterEvent', () {
     test('turn/start 事件 → running', () {
       expect(
-        sessionStatusAfterEvent(SessionStatus.idle,
-            _event(SessionEventKind.statusChange, toolStatus: 'running')),
+        sessionStatusAfterEvent(
+          SessionStatus.idle,
+          _event(SessionEventKind.statusChange, toolStatus: 'running'),
+        ),
         SessionStatus.running,
       );
     });
 
     test('turn/end 事件 → idle', () {
       expect(
-        sessionStatusAfterEvent(SessionStatus.running,
-            _event(SessionEventKind.statusChange, toolStatus: 'idle')),
+        sessionStatusAfterEvent(
+          SessionStatus.running,
+          _event(SessionEventKind.statusChange, toolStatus: 'idle'),
+        ),
         SessionStatus.idle,
       );
     });
@@ -39,7 +43,9 @@ void main() {
     test('审批请求 → waitingInput', () {
       expect(
         sessionStatusAfterEvent(
-            SessionStatus.running, _event(SessionEventKind.approvalRequest)),
+          SessionStatus.running,
+          _event(SessionEventKind.approvalRequest),
+        ),
         SessionStatus.waitingInput,
       );
     });
@@ -47,7 +53,9 @@ void main() {
     test('普通消息事件不改变状态', () {
       expect(
         sessionStatusAfterEvent(
-            SessionStatus.running, _event(SessionEventKind.assistantMessage)),
+          SessionStatus.running,
+          _event(SessionEventKind.assistantMessage),
+        ),
         SessionStatus.running,
       );
     });
@@ -89,16 +97,18 @@ void main() {
       const settings = AppSettings(notifyOnComplete: false);
       expect(
         taskNotificationFor(
-            session: _session(),
-            nextStatus: SessionStatus.idle,
-            settings: settings),
+          session: _session(),
+          nextStatus: SessionStatus.idle,
+          settings: settings,
+        ),
         isNull,
       );
       expect(
         taskNotificationFor(
-            session: _session(),
-            nextStatus: SessionStatus.waitingInput,
-            settings: settings),
+          session: _session(),
+          nextStatus: SessionStatus.waitingInput,
+          settings: settings,
+        ),
         isNotNull,
       );
     });

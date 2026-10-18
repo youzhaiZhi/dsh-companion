@@ -68,14 +68,14 @@ class PendingApproval {
   /// 转成 UI 契约里的审批请求。sessionId 用 agentId 兜底，
   /// 会话与 agent 的精确映射等真机联调时再收紧。
   ApprovalRequest toApprovalRequest() => ApprovalRequest(
-        id: eventId,
-        sessionId: agentId,
-        kind: ApprovalKind.tool,
-        title: toolName.isEmpty ? '需要审批' : toolName,
-        detail: reason,
-        createdAt: DateTime.now(),
-        toolName: toolName,
-      );
+    id: eventId,
+    sessionId: agentId,
+    kind: ApprovalKind.tool,
+    title: toolName.isEmpty ? '需要审批' : toolName,
+    detail: reason,
+    createdAt: DateTime.now(),
+    toolName: toolName,
+  );
 }
 
 /// 解析 `$events` 的一帧；不认识的结构返回 null（前向兼容）。
@@ -114,9 +114,10 @@ HostEvent? parseHostEvent(Object? raw) {
         event: event,
         eventId: eventId,
         agentId: agentId,
-        request: request is Map<String, Object?>
-            ? request
-            : const <String, Object?>{},
+        request:
+            request is Map<String, Object?>
+                ? request
+                : const <String, Object?>{},
       );
     case 'cancel':
       final eventId = raw['eventId'];
@@ -144,16 +145,16 @@ PendingApproval? approvalFromWaterfall(HostWaterfallEvent frame) {
 
 /// `approval/request` 的唯一合法授权是 `allowed-once`，其余一律拒绝。
 String approvalOutcomeFor(ApprovalDecision decision) => switch (decision) {
-      ApprovalDecision.allow => 'allowed-once',
-      ApprovalDecision.deny => 'rejected',
-      ApprovalDecision.cancel => 'cancelled',
-    };
+  ApprovalDecision.allow => 'allowed-once',
+  ApprovalDecision.deny => 'rejected',
+  ApprovalDecision.cancel => 'cancelled',
+};
 
 /// 订阅 Host 转发事件流，并负责回送瀑布事件的应答。
 class HostEventsClient {
   HostEventsClient({required MuxClient mux, required RpcClient rpc})
-      : _mux = mux,
-        _rpc = rpc;
+    : _mux = mux,
+      _rpc = rpc;
 
   final MuxClient _mux;
   final RpcClient _rpc;
@@ -184,19 +185,21 @@ class HostEventsClient {
     unawaited(_subscription?.cancel());
     _pending.clear();
     _clientId = null;
-    _subscription = _mux.open(r'$events').listen(
-      _onFrame,
-      onError: (Object error) {
-        _clientId = null;
-        if (!_controller.isClosed) {
-          _controller.addError(error);
-        }
-      },
-      onDone: () {
-        _clientId = null;
-      },
-      cancelOnError: false,
-    );
+    _subscription = _mux
+        .open(r'$events')
+        .listen(
+          _onFrame,
+          onError: (Object error) {
+            _clientId = null;
+            if (!_controller.isClosed) {
+              _controller.addError(error);
+            }
+          },
+          onDone: () {
+            _clientId = null;
+          },
+          cancelOnError: false,
+        );
   }
 
   void _onFrame(Object? raw) {
@@ -227,7 +230,9 @@ class HostEventsClient {
     final clientId = _clientId;
     if (clientId == null) {
       throw const CompanionException(
-          'approval_not_subscribed', '事件流尚未就绪，请稍后重试');
+        'approval_not_subscribed',
+        '事件流尚未就绪，请稍后重试',
+      );
     }
     await _rpc.call(r'$events/result', <String, Object?>{
       'clientId': clientId,
@@ -264,10 +269,10 @@ class HostEventsClient {
 
 /// 便于调试：把帧转成一行可读文本。
 String describeHostEvent(HostEvent event) => switch (event) {
-      HostEventsReady() => 'ready client=${event.clientId} home=${event.home}',
-      HostEmitEvent() =>
-        'emit ${event.event} args=${jsonEncode(event.args).length}B',
-      HostWaterfallEvent() =>
-        'waterfall ${event.event} id=${event.eventId} agent=${event.agentId}',
-      HostCancelEvent() => 'cancel ${event.eventId}',
-    };
+  HostEventsReady() => 'ready client=${event.clientId} home=${event.home}',
+  HostEmitEvent() =>
+    'emit ${event.event} args=${jsonEncode(event.args).length}B',
+  HostWaterfallEvent() =>
+    'waterfall ${event.event} id=${event.eventId} agent=${event.agentId}',
+  HostCancelEvent() => 'cancel ${event.eventId}',
+};

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app.dart';
 import '../strings.dart';
+import 'scan_screen.dart';
 
 /// 配对页：粘贴配对链接，或手动填网关地址 + 配对码。
 class PairScreen extends StatefulWidget {
@@ -14,8 +15,9 @@ class PairScreen extends StatefulWidget {
 
 class _PairScreenState extends State<PairScreen> {
   final TextEditingController _linkController = TextEditingController();
-  final TextEditingController _originController =
-      TextEditingController(text: 'https://192.168.1.2:3443');
+  final TextEditingController _originController = TextEditingController(
+    text: 'https://192.168.1.2:3443',
+  );
   final TextEditingController _codeController = TextEditingController();
   bool _manual = false;
   bool _busy = false;
@@ -27,6 +29,22 @@ class _PairScreenState extends State<PairScreen> {
     _originController.dispose();
     _codeController.dispose();
     super.dispose();
+  }
+
+  /// 打开扫码页；扫到配对链接后直接用它配对。
+  Future<void> _scan() async {
+    final scanned = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const ScanScreen()),
+    );
+    if (scanned == null || scanned.isEmpty || !mounted) {
+      return;
+    }
+    setState(() {
+      _manual = false;
+      _linkController.text = scanned;
+      _error = null;
+    });
+    await _submit();
   }
 
   Future<void> _submit() async {
@@ -42,13 +60,16 @@ class _PairScreenState extends State<PairScreen> {
           throw Exception('请输入形如 https://192.168.1.2:3443 的地址');
         }
         await controller.pairWithCode(
-            origin: origin, code: _codeController.text.trim());
+          origin: origin,
+          code: _codeController.text.trim(),
+        );
       } else {
         await controller.pairWithLink(_linkController.text.trim());
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text(AppStrings.pairSuccess)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text(AppStrings.pairSuccess)));
         Navigator.of(context).pop();
       }
     } catch (error) {
@@ -82,30 +103,45 @@ class _PairScreenState extends State<PairScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () async {
-                  final data = await Clipboard.getData(Clipboard.kTextPlain);
-                  if (data?.text != null) {
-                    _linkController.text = data!.text!;
-                  }
-                },
-                icon: const Icon(Icons.content_paste),
-                label: const Text(AppStrings.pairPaste),
-              ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _busy ? null : _scan,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text(AppStrings.scanEntry),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final data = await Clipboard.getData(
+                        Clipboard.kTextPlain,
+                      );
+                      if (data?.text != null) {
+                        _linkController.text = data!.text!;
+                      }
+                    },
+                    icon: const Icon(Icons.content_paste),
+                    label: const Text(AppStrings.pairPaste),
+                  ),
+                ),
+              ],
             ),
           ] else ...<Widget>[
             TextField(
               controller: _originController,
-              decoration:
-                  const InputDecoration(labelText: AppStrings.pairOriginLabel),
+              decoration: const InputDecoration(
+                labelText: AppStrings.pairOriginLabel,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _codeController,
-              decoration:
-                  const InputDecoration(labelText: AppStrings.pairCodeLabel),
+              decoration: const InputDecoration(
+                labelText: AppStrings.pairCodeLabel,
+              ),
             ),
           ],
           const SizedBox(height: 8),
@@ -117,8 +153,10 @@ class _PairScreenState extends State<PairScreen> {
                 color: theme.colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(_error!,
-                  style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+              child: Text(
+                _error!,
+                style: TextStyle(color: theme.colorScheme.onErrorContainer),
+              ),
             ),
           FilledButton(
             onPressed: _busy ? null : _submit,
@@ -132,8 +170,9 @@ class _PairScreenState extends State<PairScreen> {
           const SizedBox(height: 24),
           Text(
             '配对链接在电脑上生成：DSH → 设置 → 移动访问 → 局域网 → 创建配对密钥。链接几分钟内有效。',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

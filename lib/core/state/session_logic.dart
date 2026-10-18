@@ -10,7 +10,9 @@ class TaskNotification {
 
 /// 由会话事件推导新的状态；未知事件保持原状态。
 SessionStatus sessionStatusAfterEvent(
-    SessionStatus current, SessionEvent event) {
+  SessionStatus current,
+  SessionEvent event,
+) {
   switch (event.kind) {
     case SessionEventKind.statusChange:
       return event.toolStatus == 'running'

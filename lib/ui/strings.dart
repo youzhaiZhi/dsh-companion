@@ -24,6 +24,10 @@ abstract final class AppStrings {
   static const String pairSubmit = '配对';
   static const String pairWorking = '正在配对…';
   static const String pairSuccess = '配对成功';
+  static const String scanTitle = '扫码配对';
+  static const String scanHint = '对准电脑屏幕上的配对二维码';
+  static const String scanEntry = '扫码配对';
+  static const String pairScanOrPaste = '扫码或粘贴配对链接';
   static const String sessionsTitle = '会话';
   static const String sessionsEmpty = '这台电脑上还没有会话';
   static const String refresh = '刷新';
@@ -48,12 +52,12 @@ abstract final class AppStrings {
 }
 
 String statusLabel(SessionStatus status) => switch (status) {
-      SessionStatus.running => '进行中',
-      SessionStatus.waitingInput => '等待输入',
-      SessionStatus.idle => '空闲',
-      SessionStatus.completed => '已完成',
-      SessionStatus.unknown => '未知',
-    };
+  SessionStatus.running => '进行中',
+  SessionStatus.waitingInput => '等待输入',
+  SessionStatus.idle => '空闲',
+  SessionStatus.completed => '已完成',
+  SessionStatus.unknown => '未知',
+};
 
 Color statusColor(BuildContext context, SessionStatus status) {
   final scheme = Theme.of(context).colorScheme;
@@ -70,9 +74,9 @@ String gatewayKindLabel(GatewayKind kind) =>
     kind == GatewayKind.lan ? '局域网' : '远程';
 
 String connectionLabel(ConnectionPhase phase) => switch (phase) {
-      ConnectionPhase.connecting => AppStrings.connecting,
-      ConnectionPhase.connected => AppStrings.connected,
-      ConnectionPhase.reconnecting => '重连中…',
-      ConnectionPhase.failed => AppStrings.failed,
-      ConnectionPhase.disconnected => AppStrings.disconnected,
-    };
+  ConnectionPhase.connecting => AppStrings.connecting,
+  ConnectionPhase.connected => AppStrings.connected,
+  ConnectionPhase.reconnecting => '重连中…',
+  ConnectionPhase.failed => AppStrings.failed,
+  ConnectionPhase.disconnected => AppStrings.disconnected,
+};

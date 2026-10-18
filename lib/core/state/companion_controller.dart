@@ -38,9 +38,9 @@ class SessionFeedImpl extends ChangeNotifier implements SessionFeed {
     required SessionSummary summary,
     required Diagnostics diagnostics,
     required this.onEvent,
-  })  : _gateway = gateway,
-        _diagnostics = diagnostics,
-        _summary = summary;
+  }) : _gateway = gateway,
+       _diagnostics = diagnostics,
+       _summary = summary;
 
   @override
   final String sessionId;
@@ -84,22 +84,24 @@ class SessionFeedImpl extends ChangeNotifier implements SessionFeed {
     _error = null;
     notifyListeners();
     try {
-      _subscription = _gateway.watchSession(sessionId).listen(
-        _handleEvent,
-        onError: (Object error) {
-          _phase = ConnectionPhase.failed;
-          _error = error;
-          _diagnostics.log('session stream error: $error');
-          notifyListeners();
-        },
-        onDone: () {
-          if (_phase == ConnectionPhase.connecting) {
-            _phase = ConnectionPhase.connected;
-          }
-          notifyListeners();
-        },
-        cancelOnError: false,
-      );
+      _subscription = _gateway
+          .watchSession(sessionId)
+          .listen(
+            _handleEvent,
+            onError: (Object error) {
+              _phase = ConnectionPhase.failed;
+              _error = error;
+              _diagnostics.log('session stream error: $error');
+              notifyListeners();
+            },
+            onDone: () {
+              if (_phase == ConnectionPhase.connecting) {
+                _phase = ConnectionPhase.connected;
+              }
+              notifyListeners();
+            },
+            cancelOnError: false,
+          );
     } catch (error) {
       _phase = ConnectionPhase.failed;
       _error = error;
@@ -154,10 +156,10 @@ class CompanionControllerImpl extends CompanionController {
     SettingsStore? settingsStore,
     LiveCompanionGateway? gateway,
     TaskNotifierApi? notifier,
-  })  : _deviceStore = deviceStore ?? DeviceStore(),
-        _settingsStore = settingsStore ?? SettingsStore(),
-        _gateway = gateway ?? LiveCompanionGateway(),
-        _notifier = notifier ?? TaskNotifier();
+  }) : _deviceStore = deviceStore ?? DeviceStore(),
+       _settingsStore = settingsStore ?? SettingsStore(),
+       _gateway = gateway ?? LiveCompanionGateway(),
+       _notifier = notifier ?? TaskNotifier();
 
   final DeviceStore _deviceStore;
   final SettingsStore _settingsStore;
@@ -242,7 +244,10 @@ class CompanionControllerImpl extends CompanionController {
     final caDer = await fetchGatewayCa(origin);
     final fingerprint = sha256Hex(caDer);
     final parsed = PairingLink(
-        origin: origin, instanceId: fingerprint, token: code.trim());
+      origin: origin,
+      instanceId: fingerprint,
+      token: code.trim(),
+    );
     return _pair(parsed, label: label);
   }
 
@@ -261,9 +266,11 @@ class CompanionControllerImpl extends CompanionController {
     );
     _diagnostics.log('paired ${device.origin}');
     final updated = <DeviceRecord>[
-      ..._devices.where((existing) =>
-          existing.instanceId != device.instanceId ||
-          existing.origin != device.origin),
+      ..._devices.where(
+        (existing) =>
+            existing.instanceId != device.instanceId ||
+            existing.origin != device.origin,
+      ),
       device,
     ];
     _devices = updated;
@@ -290,9 +297,11 @@ class CompanionControllerImpl extends CompanionController {
       await _gateway.connect(device);
       _phase = ConnectionPhase.connected;
       _diagnostics.log('connected ${device.origin}');
-      final index = _devices.indexWhere((existing) =>
-          existing.instanceId == device.instanceId &&
-          existing.origin == device.origin);
+      final index = _devices.indexWhere(
+        (existing) =>
+            existing.instanceId == device.instanceId &&
+            existing.origin == device.origin,
+      );
       if (index >= 0) {
         final touched = device.copyWith(lastConnectedAt: DateTime.now());
         _devices[index] = touched;
@@ -361,11 +370,13 @@ class CompanionControllerImpl extends CompanionController {
   Future<void> openSession(String sessionId) async {
     final summary = _sessions.firstWhere(
       (session) => session.id == sessionId,
-      orElse: () => SessionSummary(
-          id: sessionId,
-          title: sessionId,
-          status: SessionStatus.unknown,
-          updatedAt: DateTime.now()),
+      orElse:
+          () => SessionSummary(
+            id: sessionId,
+            title: sessionId,
+            status: SessionStatus.unknown,
+            updatedAt: DateTime.now(),
+          ),
     );
     await _activeFeed?.disposeFeed();
     final feed = SessionFeedImpl(
@@ -395,8 +406,10 @@ class CompanionControllerImpl extends CompanionController {
     final current = _sessions[index];
     final nextStatus = sessionStatusAfterEvent(current.status, event);
     if (nextStatus != current.status) {
-      _sessions[index] =
-          current.copyWith(status: nextStatus, updatedAt: DateTime.now());
+      _sessions[index] = current.copyWith(
+        status: nextStatus,
+        updatedAt: DateTime.now(),
+      );
       notifyListeners();
       _maybeNotify(current, nextStatus);
     }
@@ -412,8 +425,9 @@ class CompanionControllerImpl extends CompanionController {
     if (notification == null) {
       return;
     }
-    unawaited(_notifier.notifyTask(
-        title: notification.title, body: notification.body));
+    unawaited(
+      _notifier.notifyTask(title: notification.title, body: notification.body),
+    );
   }
 
   @override
@@ -438,8 +452,11 @@ class CompanionControllerImpl extends CompanionController {
     ApprovalDecision decision, {
     List<String> selectedOptions = const <String>[],
   }) async {
-    await _gateway.decideApproval(request, decision,
-        selectedOptions: selectedOptions);
+    await _gateway.decideApproval(
+      request,
+      decision,
+      selectedOptions: selectedOptions,
+    );
     _approvals.remove(request.id);
     _activeFeed?.removeApproval(request.id);
     notifyListeners();
@@ -468,8 +485,9 @@ class CompanionControllerImpl extends CompanionController {
       ..removeWhere((id, _) => removed.contains(id))
       ..addAll(next);
     for (final request in _approvals.values) {
-      final index =
-          _sessions.indexWhere((session) => session.id == request.sessionId);
+      final index = _sessions.indexWhere(
+        (session) => session.id == request.sessionId,
+      );
       if (index >= 0 && _sessions[index].status != SessionStatus.waitingInput) {
         final current = _sessions[index];
         _sessions[index] = current.copyWith(
@@ -483,10 +501,9 @@ class CompanionControllerImpl extends CompanionController {
       _diagnostics.log('approval pending ${request.title}');
       // 没有对应会话行时也提醒一次（例如会话列表尚未刷新）。
       if (!_sessions.any((session) => session.id == request.sessionId)) {
-        unawaited(_notifier.notifyTask(
-          title: 'DSH 等待你的审批',
-          body: request.title,
-        ));
+        unawaited(
+          _notifier.notifyTask(title: 'DSH 等待你的审批', body: request.title),
+        );
       }
     }
   }
@@ -520,9 +537,12 @@ class CompanionControllerImpl extends CompanionController {
   @override
   Future<void> renameDevice(String instanceId, String label) async {
     _devices = _devices
-        .map((device) => device.instanceId == instanceId
-            ? device.copyWith(label: label)
-            : device)
+        .map(
+          (device) =>
+              device.instanceId == instanceId
+                  ? device.copyWith(label: label)
+                  : device,
+        )
         .toList(growable: false);
     await _deviceStore.save(_devices);
     notifyListeners();

@@ -21,24 +21,30 @@ class SettingsScreen extends StatelessWidget {
           SwitchListTile(
             title: const Text(AppStrings.notifications),
             value: settings.notificationsEnabled,
-            onChanged: (value) => controller
-                .updateSettings(settings.copyWith(notificationsEnabled: value)),
+            onChanged:
+                (value) => controller.updateSettings(
+                  settings.copyWith(notificationsEnabled: value),
+                ),
           ),
           SwitchListTile(
             title: const Text(AppStrings.notifyComplete),
             value: settings.notifyOnComplete,
-            onChanged: settings.notificationsEnabled
-                ? (value) => controller
-                    .updateSettings(settings.copyWith(notifyOnComplete: value))
-                : null,
+            onChanged:
+                settings.notificationsEnabled
+                    ? (value) => controller.updateSettings(
+                      settings.copyWith(notifyOnComplete: value),
+                    )
+                    : null,
           ),
           SwitchListTile(
             title: const Text(AppStrings.notifyWaiting),
             value: settings.notifyOnWaiting,
-            onChanged: settings.notificationsEnabled
-                ? (value) => controller
-                    .updateSettings(settings.copyWith(notifyOnWaiting: value))
-                : null,
+            onChanged:
+                settings.notificationsEnabled
+                    ? (value) => controller.updateSettings(
+                      settings.copyWith(notifyOnWaiting: value),
+                    )
+                    : null,
           ),
           const Divider(),
           const _SectionHeader(title: AppStrings.theme),
@@ -55,8 +61,9 @@ class SettingsScreen extends StatelessWidget {
               // ignore: deprecated_member_use
               onChanged: (value) {
                 if (value != null) {
-                  controller
-                      .updateSettings(settings.copyWith(themeMode: value));
+                  controller.updateSettings(
+                    settings.copyWith(themeMode: value),
+                  );
                 }
               },
             ),
@@ -72,23 +79,25 @@ class SettingsScreen extends StatelessWidget {
               }
               await showDialog<void>(
                 context: context,
-                builder: (dialogContext) => AlertDialog(
-                  title: const Text(AppStrings.diagnostics),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        text.isEmpty ? '暂无日志' : text,
-                        style: theme.textTheme.bodySmall,
+                builder:
+                    (dialogContext) => AlertDialog(
+                      title: const Text(AppStrings.diagnostics),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            text.isEmpty ? '暂无日志' : text,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
                       ),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('关闭'),
+                        ),
+                      ],
                     ),
-                  ),
-                  actions: <Widget>[
-                    TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: const Text('关闭')),
-                  ],
-                ),
               );
             },
           ),
@@ -115,8 +124,9 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Text(
         title,
-        style: theme.textTheme.labelLarge
-            ?.copyWith(color: theme.colorScheme.primary),
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.primary,
+        ),
       ),
     );
   }
