@@ -157,6 +157,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Resolve release tag
         id: tag
         shell: bash
@@ -178,6 +181,22 @@ jobs:
           esac
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "releasing tag: $TAG"
+
+      - name: Verify pubspec version matches release tag
+        shell: bash
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # pubspec 形如 `version: 0.3.0+3`；tag 形如 `v0.3.0`。
+          # 两者不一致会导致 APK 里显示旧版本号（曾发生过一次）。
+          PUB=$(grep -E '^version:' pubspec.yaml | head -n1 | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
+          WANT="${TAG#v}"
+          echo "pubspec version: $PUB / release tag: $WANT"
+          if [ "$PUB" != "$WANT" ]; then
+            echo "::error::pubspec version ($PUB) does not match release tag ($WANT); bump pubspec.yaml (and the settings screen) before releasing"
+            exit 1
+          fi
 
       - name: Download APK artifact
         uses: actions/download-artifact@v4

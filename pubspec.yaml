@@ -1,7 +1,7 @@
 name: dsh_companion
 description: "DSH 伴侣 — DeepSeek Harness 的 Flutter 轻量伴侣 Android App。"
 publish_to: 'none'
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
