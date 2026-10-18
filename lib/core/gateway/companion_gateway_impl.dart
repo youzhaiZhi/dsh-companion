@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../contracts.dart';
+import 'events.dart';
 import 'pairing.dart';
 import 'rpc.dart';
 
@@ -15,6 +16,7 @@ class LiveCompanionGateway {
   final PairingClient _pairing = const PairingClient();
   RpcClient? _rpc;
   MuxClient? _mux;
+  HostEventsClient? _events;
   DeviceRecord? _device;
 
   DeviceRecord? get device => _device;
@@ -49,6 +51,8 @@ class LiveCompanionGateway {
         client: http, origin: device.origin, credentials: credentials);
     _mux = MuxClient(
         client: http, origin: device.origin, credentials: credentials);
+    _events = HostEventsClient(mux: _mux!, rpc: _rpc!);
+    _events!.start();
   }
 
   Future<List<SessionSummary>> listSessions() async {
@@ -105,13 +109,36 @@ class LiveCompanionGateway {
     ApprovalDecision decision, {
     List<String> selectedOptions = const <String>[],
   }) async {
-    throw const CompanionException(
-      'approval_not_wired',
-      '审批应答还在接入中：DSH 通过 \$events 瀑布下发审批，需要先建立事件订阅。',
-    );
+    final events = _events;
+    if (events == null) {
+      throw const CompanionException('not_connected', '尚未连接电脑');
+    }
+    await events.respond(request.id, decision);
   }
 
+  /// 订阅 Host 转发事件流（审批/提问从这里来）。
+  ///
+  /// 幂等：重复调用只保证订阅在跑。
+  void ensureEventsSubscribed() {
+    final events = _events;
+    if (events != null && !events.isReady) {
+      events.start();
+    }
+  }
+
+  /// 事件流（ready/emit/waterfall/cancel），供控制器转成待审批列表。
+  Stream<HostEvent> get hostEvents =>
+      _events?.events ?? const Stream<HostEvent>.empty();
+
+  /// 当前待应答的审批。
+  List<PendingApproval> get pendingApprovals => <PendingApproval>[
+        for (final frame in _events?.pending ?? const <HostWaterfallEvent>[])
+          if (approvalFromWaterfall(frame) case final approval?) approval,
+      ];
+
   Future<void> close() async {
+    await _events?.dispose();
+    _events = null;
     await _mux?.close();
     _mux = null;
     _rpc?.close();

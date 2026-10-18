@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../contracts.dart';
 import '../gateway/companion_gateway_impl.dart';
+import '../gateway/events.dart';
 import '../gateway/pairing.dart';
 import '../notifications/task_notifier.dart';
 import '../storage/stores.dart';
@@ -174,6 +175,10 @@ class CompanionControllerImpl extends CompanionController {
   SessionFeedImpl? _activeFeed;
   AppSettings _settings = const AppSettings();
 
+  /// 待应答的审批/提问（来自 `$events` 瀑布）。
+  final Map<String, ApprovalRequest> _approvals = <String, ApprovalRequest>{};
+  StreamSubscription<HostEvent>? _eventsSubscription;
+
   @override
   bool get initializing => _initializing;
 
@@ -201,7 +206,7 @@ class CompanionControllerImpl extends CompanionController {
 
   @override
   List<ApprovalRequest> get pendingApprovals =>
-      _activeFeed?.pendingApprovals ?? const <ApprovalRequest>[];
+      List<ApprovalRequest>.unmodifiable(_approvals.values);
 
   @override
   AppSettings get settings => _settings;
@@ -295,6 +300,7 @@ class CompanionControllerImpl extends CompanionController {
         await _deviceStore.save(_devices);
       }
       notifyListeners();
+      _startEventSubscription();
       await refreshSessions();
     } catch (error) {
       _phase = ConnectionPhase.failed;
@@ -307,6 +313,9 @@ class CompanionControllerImpl extends CompanionController {
 
   @override
   Future<void> disconnect() async {
+    await _eventsSubscription?.cancel();
+    _eventsSubscription = null;
+    _approvals.clear();
     await _gateway.close();
     await _activeFeed?.disposeFeed();
     _activeFeed = null;
@@ -431,12 +440,70 @@ class CompanionControllerImpl extends CompanionController {
   }) async {
     await _gateway.decideApproval(request, decision,
         selectedOptions: selectedOptions);
+    _approvals.remove(request.id);
     _activeFeed?.removeApproval(request.id);
     notifyListeners();
   }
 
   @override
-  Future<void> refreshPendingApprovals() async {}
+  Future<void> refreshPendingApprovals() async {
+    _syncApprovalsFromGateway();
+    notifyListeners();
+  }
+
+  /// 事件流里的 waterfall 帧 → 待审批列表 + 会话状态 + 通知。
+  void _syncApprovalsFromGateway() {
+    final pending = _gateway.pendingApprovals;
+    final next = <String, ApprovalRequest>{
+      for (final approval in pending)
+        approval.eventId: approval.toApprovalRequest(),
+    };
+    final added = next.keys.where((id) => !_approvals.containsKey(id)).toList();
+    final removed =
+        _approvals.keys.where((id) => !next.containsKey(id)).toList();
+    if (added.isEmpty && removed.isEmpty) {
+      return;
+    }
+    _approvals
+      ..removeWhere((id, _) => removed.contains(id))
+      ..addAll(next);
+    for (final request in _approvals.values) {
+      final index =
+          _sessions.indexWhere((session) => session.id == request.sessionId);
+      if (index >= 0 && _sessions[index].status != SessionStatus.waitingInput) {
+        final current = _sessions[index];
+        _sessions[index] = current.copyWith(
+          status: SessionStatus.waitingInput,
+          updatedAt: DateTime.now(),
+        );
+        _maybeNotify(current, SessionStatus.waitingInput);
+      }
+    }
+    for (final request in added.map((id) => next[id]!)) {
+      _diagnostics.log('approval pending ${request.title}');
+      // 没有对应会话行时也提醒一次（例如会话列表尚未刷新）。
+      if (!_sessions.any((session) => session.id == request.sessionId)) {
+        unawaited(_notifier.notifyTask(
+          title: 'DSH 等待你的审批',
+          body: request.title,
+        ));
+      }
+    }
+  }
+
+  void _startEventSubscription() {
+    unawaited(_eventsSubscription?.cancel());
+    _gateway.ensureEventsSubscribed();
+    _eventsSubscription = _gateway.hostEvents.listen(
+      (event) {
+        if (event is HostWaterfallEvent || event is HostCancelEvent) {
+          _syncApprovalsFromGateway();
+          notifyListeners();
+        }
+      },
+      onError: (Object error) => _diagnostics.log('event stream error: $error'),
+    );
+  }
 
   @override
   Future<void> removeDevice(String instanceId) async {
