@@ -53,7 +53,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final feed = controller.activeFeed;
     final theme = Theme.of(context);
     final events = feed?.events ?? const <SessionEvent>[];
-    final approvals = feed?.pendingApprovals ?? const <ApprovalRequest>[];
+    // 审批来自 `$events` 瀑布（控制器全局维护），按会话过滤后内联展示。
+    final approvals = controller.pendingApprovals
+        .where((request) => request.sessionId == widget.sessionId)
+        .toList(growable: false);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {

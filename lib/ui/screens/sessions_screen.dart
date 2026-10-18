@@ -28,6 +28,30 @@ class SessionsScreen extends StatelessWidget {
       ),
       body: Column(
         children: <Widget>[
+          if (controller.pendingApprovals.isNotEmpty)
+            MaterialBanner(
+              leading: const Icon(Icons.pending_actions),
+              content: Text(
+                '有 ${controller.pendingApprovals.length} 个请求等待你审批',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () async {
+                    final first = controller.pendingApprovals.first;
+                    await controller.openSession(first.sessionId);
+                    if (context.mounted) {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              SessionDetailScreen(sessionId: first.sessionId),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('去处理'),
+                ),
+              ],
+            ),
           if (controller.connectionError != null)
             MaterialBanner(
               content: Text(controller.connectionError!),

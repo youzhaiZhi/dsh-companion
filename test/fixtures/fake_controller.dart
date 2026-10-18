@@ -40,7 +40,12 @@ class FakeCompanionController extends CompanionController {
 
   @override
   List<ApprovalRequest> get pendingApprovals =>
-      activeFeed?.pendingApprovals ?? const <ApprovalRequest>[];
+      pendingApprovalsOverride ??
+      activeFeed?.pendingApprovals ??
+      const <ApprovalRequest>[];
+
+  /// 直接指定待审批列表（测试 UI 横幅/卡片用）。
+  List<ApprovalRequest>? pendingApprovalsOverride;
 
   /// 记录 UI 触发的调用，供断言。
   final List<String> calls = <String>[];
